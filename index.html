@@ -35,19 +35,15 @@ body{display:flex;flex-direction:column}
 /* Player specifically pops up from the bottom */
 #player{transform:translateY(0)}
 #player.off{transform:translateY(100%)}
-#lib-hdr{background:var(--o);padding:13px 14px;
-  padding-top:calc(13px + var(--safe-top));
-  display:flex;align-items:center;gap:8px;flex-shrink:0}
-.logo{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.5px;margin-right:auto}
-.hbtn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);
-  color:#fff;border-radius:10px;padding:0 13px;font-size:14px;font-weight:500;
-  cursor:pointer;display:flex;align-items:center;gap:6px;height:40px;white-space:nowrap;
-  -webkit-appearance:none;appearance:none}
-.hbtn:active{background:rgba(255,255,255,.38)}
-.hbtn.ico-only{padding:0 10px}
-#search-row{padding:10px 14px 8px;background:var(--surf);flex-shrink:0;
-  border-bottom:1px solid var(--bd)}
-#search-wrap{position:relative;display:flex;align-items:center}
+#top-row{display:flex;align-items:center;gap:8px;
+  padding:calc(10px + var(--safe-top)) 14px 10px;
+  background:var(--surf);border-bottom:1px solid var(--bd);flex-shrink:0}
+#search-wrap{position:relative;display:flex;align-items:center;flex:1;min-width:0}
+#menu-btn{background:var(--bg);border:1px solid var(--bd);color:var(--tx);
+  border-radius:10px;width:40px;height:40px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none}
+#menu-btn:active{background:var(--ol)}
 .si{position:absolute;left:11px;color:var(--mu);pointer-events:none;display:flex}
 #search{width:100%;height:40px;border:.5px solid var(--bd);border-radius:10px;
   background:var(--bg);color:var(--tx);padding:0 36px 0 36px;font-size:15px;
@@ -243,14 +239,7 @@ body{display:flex;flex-direction:column}
 
 <div id="app">
   <div class="screen" id="library">
-    <div id="lib-hdr">
-      <span style="font-size:22px">🦈</span>
-      <span class="logo">HarbuPlayer</span>
-      <button class="hbtn ico-only" id="menu-btn" aria-label="Menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
-      </button>
-    </div>
-    <div id="search-row">
+    <div id="top-row">
       <div id="search-wrap">
         <span class="si"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
         <input id="search" type="search" placeholder="Search title, artist, album..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
@@ -258,6 +247,9 @@ body{display:flex;flex-direction:column}
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
+      <button id="menu-btn" aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+      </button>
     </div>
     <div id="chips">
       <button class="chip on" data-v="all">
