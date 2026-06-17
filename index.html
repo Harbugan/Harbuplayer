@@ -1034,7 +1034,13 @@ function render(){
     // NOTE: openGroups is the single source of truth — never forced open here.
     // Groups are opened either by user tap, or by playFromGroup() when playback starts.
 
-    Object.keys(groups).sort(function(a,b){return a.localeCompare(b,'da');}).forEach(function(g){
+    Object.keys(groups).sort(function(a,b){
+      if(sort==='recent'){
+        // Preserve insertion order: compare the id of the first track in each group
+        return groups[a][0].id - groups[b][0].id;
+      }
+      return a.localeCompare(b,'da',{sensitivity:'base'});
+    }).forEach(function(g){
       var isOpen=!!openGroups[g];
       var hasCur=groups[g].some(function(t){return t.id===curId;});
       // Pick cover art from first track that has it
