@@ -178,6 +178,41 @@ body{display:flex;flex-direction:column}
   font-size:14px;white-space:nowrap;opacity:0;
   transition:opacity .2s,transform .2s;z-index:200;pointer-events:none}
 #toast.vis{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ===== BOTTOM SHEET MENU ===== */
+#menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+#menu-overlay.vis{opacity:1;pointer-events:all}
+#menu-sheet{position:fixed;bottom:0;left:0;right:0;z-index:51;
+  background:var(--surf);border-radius:20px 20px 0 0;
+  padding-bottom:calc(10px + var(--safe-bot));
+  transform:translateY(100%);transition:transform .32s cubic-bezier(.4,0,.2,1)}
+#menu-sheet.vis{transform:translateY(0)}
+#menu-handle{width:36px;height:4px;background:var(--bd);border-radius:2px;
+  margin:12px auto 6px;flex-shrink:0}
+.mnu-sec{font-size:11px;font-weight:700;color:var(--mu);
+  letter-spacing:.08em;text-transform:uppercase;padding:10px 20px 4px}
+.mnu-item{display:flex;align-items:center;gap:14px;width:100%;
+  padding:11px 20px;background:none;border:none;color:var(--tx);
+  cursor:pointer;text-align:left;-webkit-appearance:none;appearance:none;
+  -webkit-user-select:none;user-select:none}
+.mnu-item:not([disabled]):active{background:var(--ol)}
+.mnu-item[disabled]{opacity:.42;cursor:default}
+.mnu-item.danger .mnu-ico{background:#FEF2F2;color:#EF4444}
+.mnu-item.danger .mnu-lbl{color:#EF4444}
+.mnu-ico{width:40px;height:40px;border-radius:11px;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--o);flex-shrink:0}
+.mnu-txt{flex:1;min-width:0}
+.mnu-lbl{font-size:15px;font-weight:500;line-height:1.2}
+.mnu-sub{font-size:12px;color:var(--mu);margin-top:2px}
+.mnu-badge{background:var(--bd);color:var(--mu);border-radius:6px;
+  padding:2px 8px;font-size:11px;font-weight:600;flex-shrink:0;white-space:nowrap}
+.mnu-div{height:1px;background:var(--bd);margin:6px 20px}
+#mnu-cancel{width:calc(100% - 28px);margin:10px 14px 0;height:48px;
+  border:1.5px solid var(--bd);border-radius:12px;background:none;
+  color:var(--tx);font-size:15px;font-weight:600;cursor:pointer;
+  display:block;-webkit-appearance:none;appearance:none}
+#mnu-cancel:active{background:var(--ol)}
 .h-inp{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .scroll-anchor{height:calc(72px + var(--safe-bot));flex-shrink:0}
 </style>
@@ -317,6 +352,71 @@ body{display:flex;flex-direction:column}
 </div>
 
 <div id="toast"></div>
+
+<!-- ===== BOTTOM SHEET MENU ===== -->
+<div id="menu-overlay" aria-hidden="true"></div>
+<div id="menu-sheet" role="dialog" aria-label="Menu" aria-modal="true">
+  <div id="menu-handle"></div>
+
+  <div class="mnu-sec">Manage</div>
+
+  <button class="mnu-item" id="mi-refresh">
+    <div class="mnu-ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </div>
+    <div class="mnu-txt">
+      <div class="mnu-lbl">Opdater bibliotek</div>
+      <div class="mnu-sub">Genindlaes listen fra lageret</div>
+    </div>
+  </button>
+
+  <button class="mnu-item danger" id="mi-clear">
+    <div class="mnu-ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </div>
+    <div class="mnu-txt">
+      <div class="mnu-lbl">Ryd biblioteket</div>
+      <div class="mnu-sub">Fjerner alle sange fra appen</div>
+    </div>
+  </button>
+
+  <div class="mnu-div"></div>
+
+  <button class="mnu-item" disabled>
+    <div class="mnu-ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+    </div>
+    <div class="mnu-txt">
+      <div class="mnu-lbl">Skin</div>
+      <div class="mnu-sub">Tilpas udseende og farver</div>
+    </div>
+    <div class="mnu-badge">Snart</div>
+  </button>
+
+  <button class="mnu-item" disabled>
+    <div class="mnu-ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+    </div>
+    <div class="mnu-txt">
+      <div class="mnu-lbl">Playback</div>
+      <div class="mnu-sub">Afspilningsindstillinger</div>
+    </div>
+    <div class="mnu-badge">Snart</div>
+  </button>
+
+  <button class="mnu-item" disabled>
+    <div class="mnu-ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    </div>
+    <div class="mnu-txt">
+      <div class="mnu-lbl">Device Info</div>
+      <div class="mnu-sub">Enhedsinformation og lager</div>
+    </div>
+    <div class="mnu-badge">Snart</div>
+  </button>
+
+  <button id="mnu-cancel">Luk</button>
+</div>
 
 <script>
 (function(){
@@ -1043,20 +1143,68 @@ $('file-input').addEventListener('change',function(){
   this.value='';
 });
 
-$('menu-btn').addEventListener('click',function(){
-  if(!lib.length){ toast('Biblioteket er tomt'); return; }
-  if(confirm('Ryd biblioteket?\n\nDette fjerner alle '+lib.length+' sange fra appen.\nFilerne paa telefonen bevaeres.')){
-    lib.forEach(function(t){
-      try{URL.revokeObjectURL(t.url);}catch(e){}
-      try{if(t.artUrl)URL.revokeObjectURL(t.artUrl);}catch(e){}
-      dbDel(t.id);
-    });
-    lib=[]; curId=null; queue=[]; qpos=-1;
-    audio.pause(); audio.src='';
-    $('mini').classList.remove('vis');
-    render();
-    toast('Bibliotek ryddet');
-  }
+// ================================================================
+// BOTTOM SHEET MENU
+// ================================================================
+function openMenu(){
+  $('menu-overlay').classList.add('vis');
+  $('menu-sheet').classList.add('vis');
+}
+function closeMenu(){
+  $('menu-overlay').classList.remove('vis');
+  $('menu-sheet').classList.remove('vis');
+}
+
+$('menu-btn').addEventListener('click', openMenu);
+$('menu-overlay').addEventListener('click', closeMenu);
+$('mnu-cancel').addEventListener('click', closeMenu);
+
+// Swipe down to close
+(function(){
+  var sh=$('menu-sheet'), startY=0, curY=0, dragging=false;
+  sh.addEventListener('touchstart',function(e){
+    startY=e.touches[0].clientY; curY=startY; dragging=true;
+  },{passive:true});
+  sh.addEventListener('touchmove',function(e){
+    if(!dragging) return;
+    curY=e.touches[0].clientY;
+    var dy=Math.max(0,curY-startY);
+    sh.style.transform='translateY('+dy+'px)';
+  },{passive:true});
+  sh.addEventListener('touchend',function(){
+    if(!dragging) return; dragging=false;
+    var dy=curY-startY;
+    sh.style.transform='';
+    if(dy>80) closeMenu();
+  });
+})();
+
+// Manage → Refresh library
+$('mi-refresh').addEventListener('click',function(){
+  closeMenu();
+  render();
+  toast('Biblioteksliste opdateret \u2713');
+});
+
+// Manage → Clear library
+$('mi-clear').addEventListener('click',function(){
+  closeMenu();
+  // Wait for sheet to close before native confirm
+  setTimeout(function(){
+    if(!lib.length){ toast('Biblioteket er allerede tomt'); return; }
+    if(confirm('Ryd biblioteket?\n\nFjerner alle '+lib.length+' sange fra appen.\nDine filer paa telefonen bevaeres.')){
+      lib.forEach(function(t){
+        try{URL.revokeObjectURL(t.url);}catch(e){}
+        try{if(t.artUrl)URL.revokeObjectURL(t.artUrl);}catch(e){}
+        dbDel(t.id);
+      });
+      lib=[]; curId=null; queue=[]; qpos=-1;
+      audio.pause(); audio.src='';
+      $('mini').classList.remove('vis');
+      render();
+      toast('Bibliotek ryddet');
+    }
+  }, 320);
 });
 
 $('search').addEventListener('input',function(){
