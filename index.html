@@ -192,6 +192,25 @@ body{display:flex;flex-direction:column}
   margin:12px auto 6px;flex-shrink:0}
 .mnu-sec{font-size:11px;font-weight:700;color:var(--mu);
   letter-spacing:.08em;text-transform:uppercase;padding:10px 20px 4px}
+/* Collapsible section header */
+.mnu-sec-toggle{display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;padding-right:16px;-webkit-user-select:none;user-select:none}
+.mnu-sec-toggle:active{opacity:.7}
+.mnu-sec-chev{color:var(--mu);transition:transform .22s cubic-bezier(.4,0,.2,1);flex-shrink:0}
+.mnu-sec-chev.open{transform:rotate(90deg)}
+/* Collapsible body */
+.mnu-collapse{overflow:hidden;
+  transition:max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s;
+  max-height:0;opacity:0}
+.mnu-collapse.open{max-height:400px;opacity:1}
+/* Add music row */
+.mnu-add-row{display:flex;align-items:center;gap:14px;padding:10px 20px}
+.mnu-add-pills{display:flex;gap:8px;flex-shrink:0}
+.mnu-pill{padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;
+  border:1.5px solid var(--bd);background:var(--bg);color:var(--tx);
+  cursor:pointer;display:flex;align-items:center;gap:5px;
+  -webkit-appearance:none;appearance:none;white-space:nowrap}
+.mnu-pill:active{background:var(--ol);border-color:var(--o);color:var(--o)}
 .mnu-item{display:flex;align-items:center;gap:14px;width:100%;
   padding:11px 20px;background:none;border:none;color:var(--tx);
   cursor:pointer;text-align:left;-webkit-appearance:none;appearance:none;
@@ -227,14 +246,7 @@ body{display:flex;flex-direction:column}
     <div id="lib-hdr">
       <span style="font-size:22px">🦈</span>
       <span class="logo">HarbuPlayer</span>
-      <button class="hbtn" id="scan-btn">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Scan
-      </button>
-      <button class="hbtn ico-only" id="add-btn" aria-label="Add files">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
-      <button class="hbtn ico-only" id="menu-btn" aria-label="Mere">
+      <button class="hbtn ico-only" id="menu-btn" aria-label="Menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
       </button>
     </div>
@@ -359,27 +371,55 @@ body{display:flex;flex-direction:column}
 <div id="menu-sheet" role="dialog" aria-label="Menu" aria-modal="true">
   <div id="menu-handle"></div>
 
-  <div class="mnu-sec">Manage</div>
+  <!-- Collapsible Manage section -->
+  <div class="mnu-sec mnu-sec-toggle" id="mnu-manage-hdr">
+    <span>Manage</span>
+    <svg id="mnu-manage-chev" class="mnu-sec-chev open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="mnu-collapse open" id="mnu-manage-body">
 
-  <button class="mnu-item" id="mi-refresh">
-    <div class="mnu-ico">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    <!-- Add music — combined folder + files -->
+    <div class="mnu-add-row">
+      <div class="mnu-ico">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <div class="mnu-txt">
+        <div class="mnu-lbl">Add music</div>
+        <div class="mnu-sub">Add to your library</div>
+      </div>
+      <div class="mnu-add-pills">
+        <button class="mnu-pill" id="mi-add-folder">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Folder
+        </button>
+        <button class="mnu-pill" id="mi-add-files">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Files
+        </button>
+      </div>
     </div>
-    <div class="mnu-txt">
-      <div class="mnu-lbl">Refresh library</div>
-      <div class="mnu-sub">Reload list from storage</div>
-    </div>
-  </button>
 
-  <button class="mnu-item danger" id="mi-clear">
-    <div class="mnu-ico">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-    </div>
-    <div class="mnu-txt">
-      <div class="mnu-lbl">Clear library</div>
-      <div class="mnu-sub">Removes all tracks from the app</div>
-    </div>
-  </button>
+    <button class="mnu-item" id="mi-refresh">
+      <div class="mnu-ico">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </div>
+      <div class="mnu-txt">
+        <div class="mnu-lbl">Refresh library</div>
+        <div class="mnu-sub">Reload list from storage</div>
+      </div>
+    </button>
+
+    <button class="mnu-item danger" id="mi-clear">
+      <div class="mnu-ico">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </div>
+      <div class="mnu-txt">
+        <div class="mnu-lbl">Clear library</div>
+        <div class="mnu-sub">Removes all tracks from the app</div>
+      </div>
+    </button>
+
+  </div><!-- /mnu-manage-body -->
 
   <div class="mnu-div"></div>
 
@@ -1120,14 +1160,8 @@ $('pl-prog').addEventListener('touchend',function(){dragging=false;});
 // ================================================================
 // BUTTON LISTENERS
 // ================================================================
-$('scan-btn').addEventListener('click',function(){
-  if(typeof window.showDirectoryPicker==='function'){
-    scanWithPicker();
-  } else {
-    $('dir-input').click();
-  }
-});
 
+// dir-input fallback (triggered from menu when showDirectoryPicker not available)
 $('dir-input').addEventListener('change',function(){
   if(this.files&&this.files.length){
     var arr=Array.from(this.files).filter(function(f){return isAudio(f.name);});
@@ -1141,9 +1175,6 @@ $('dir-input').addEventListener('change',function(){
   this.value='';
 });
 
-$('add-btn').addEventListener('click',function(){
-  $('file-input').click();
-});
 $('file-input').addEventListener('change',function(){
   if(this.files&&this.files.length){
     var arr=Array.from(this.files);
@@ -1169,6 +1200,14 @@ $('menu-btn').addEventListener('click', openMenu);
 $('menu-overlay').addEventListener('click', closeMenu);
 $('mnu-cancel').addEventListener('click', closeMenu);
 
+// Manage section collapse/expand
+var manageOpen = true;
+$('mnu-manage-hdr').addEventListener('click', function(){
+  manageOpen = !manageOpen;
+  $('mnu-manage-body').classList.toggle('open', manageOpen);
+  $('mnu-manage-chev').classList.toggle('open', manageOpen);
+});
+
 // Swipe down to close
 (function(){
   var sh=$('menu-sheet'), startY=0, curY=0, dragging=false;
@@ -1188,6 +1227,24 @@ $('mnu-cancel').addEventListener('click', closeMenu);
     if(dy>80) closeMenu();
   });
 })();
+
+// Add music — Folder pill
+$('mi-add-folder').addEventListener('click',function(){
+  closeMenu();
+  setTimeout(function(){
+    if(typeof window.showDirectoryPicker==='function'){
+      scanWithPicker();
+    } else {
+      $('dir-input').click();
+    }
+  }, 320);
+});
+
+// Add music — Files pill
+$('mi-add-files').addEventListener('click',function(){
+  closeMenu();
+  setTimeout(function(){ $('file-input').click(); }, 320);
+});
 
 // Manage → Refresh library
 $('mi-refresh').addEventListener('click',function(){
