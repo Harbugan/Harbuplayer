@@ -786,6 +786,7 @@ function playFromGroup(id, groupTracks){
 }
 
 function _startPlayback(id, t){
+  _transitioning = true;   // suppress the pause event fired by changing audio.src
   curId=id;
   // Update MediaSession BEFORE play() so Chrome knows the session is active
   setMediaSession(t);
@@ -1046,6 +1047,36 @@ function saveMeta(){
   } catch(e){}
 }
 
+// Saves the full playback session — called periodically and on page hide/unload.
+// Kept separate from saveMeta so we don't hit IndexedDB on every chip/fav toggle.
+function savePlaybackState(){
+  if(!db) return;
+  try {
+    dbMeta('curId', curId);
+    dbMeta('currentTime', (audio && !isNaN(audio.currentTime)) ? audio.currentTime : 0);
+    dbMeta('queue', JSON.stringify(queue));
+    dbMeta('qpos', qpos);
+    dbMeta('shuffle', shuffle);
+    dbMeta('repeat', repeat);
+    dbMeta('vol', $('vol-slider').value);
+  } catch(e){}
+}
+
+// Interval handle — active only while audio is playing
+var _saveInterval = null;
+
+function _startSaveInterval(){
+  if(_saveInterval) return;
+  _saveInterval = setInterval(savePlaybackState, 5000);
+}
+function _stopSaveInterval(){
+  if(_saveInterval){ clearInterval(_saveInterval); _saveInterval=null; }
+}
+
+// Guard: true while we are switching tracks. Prevents the pause event that fires
+// when audio.src is replaced from writing currentTime=0 over the real saved position.
+var _transitioning = false;
+
 async function loadLibrary(){
   try {
     var rows=await dbAll();
@@ -1078,6 +1109,36 @@ async function loadLibrary(){
       updatePlayerUI(t);
       audio.src=t.url;
       audio.volume=$('vol-slider').value/100;
+
+      // Restore queue and position within the queue
+      var savedQueue=await dbMeta('queue');
+      var savedQpos=await dbMeta('qpos');
+      if(savedQueue){
+        try{
+          var parsedQueue=JSON.parse(savedQueue);
+          // Validate every id still exists in the library before trusting the queue
+          if(Array.isArray(parsedQueue) && parsedQueue.every(function(id){return !!trackById(id);})){
+            queue=parsedQueue;
+            qpos=(savedQpos!=null && savedQpos>=0 && savedQpos<queue.length) ? savedQpos : queue.indexOf(curId);
+          }
+        }catch(ex){}
+      }
+      // Fall back to a minimal queue of just the current track if nothing was saved/valid
+      if(!queue.length){ queue=[curId]; qpos=0; }
+
+      // Seek to saved position once the browser has the audio metadata
+      var savedTime=await dbMeta('currentTime');
+      if(savedTime && savedTime>0){
+        var onMeta=function(){
+          // Only seek if the position is meaningfully into the track (>2s)
+          // and doesn't overshoot the duration
+          if(audio.duration && savedTime > 2 && savedTime < audio.duration - 1){
+            audio.currentTime=savedTime;
+          }
+          audio.removeEventListener('loadedmetadata', onMeta);
+        };
+        audio.addEventListener('loadedmetadata', onMeta);
+      }
     }
     render();
 
@@ -1117,22 +1178,34 @@ audio.addEventListener('timeupdate',function(){
   }
 });
 audio.addEventListener('ended',function(){
+  _stopSaveInterval();
   if(repeat){ audio.currentTime=0; audio.play(); }
   else nextTrack();
+  savePlaybackState();
 });
 audio.addEventListener('play',function(){
   $('pl-ico').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
   $('mini-ico').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
   $('pl-art').classList.add('playing');
   if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing';
+  _transitioning = false;  // new track is live — saves are safe again
+  _startSaveInterval();
 });
 audio.addEventListener('pause',function(){
   $('pl-ico').innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';
   $('mini-ico').innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';
   $('pl-art').classList.remove('playing');
   if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused';
+  _stopSaveInterval();
+  if(!_transitioning) savePlaybackState();  // skip the src-swap pause, save real pauses only
 });
 audio.addEventListener('error',function(){ toast('Could not play this file'); });
+
+// Save position when the user switches apps, locks screen, or closes the tab
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'hidden') savePlaybackState();
+});
+window.addEventListener('beforeunload', savePlaybackState);
 
 // ================================================================
 // SEEK
