@@ -129,9 +129,10 @@ body{display:flex;flex-direction:column}
   justify-content:center;padding:24px 20px;gap:20px;overflow:hidden}
 #pl-art{width:min(260px,70vw);aspect-ratio:1;border-radius:18px;
   background:var(--ol);display:flex;align-items:center;justify-content:center;
-  background-size:cover;background-position:center;color:var(--o);
+  overflow:hidden;color:var(--o);
   box-shadow:0 8px 40px rgba(0,0,0,.18);transition:transform .2s}
 #pl-art.playing{animation:artPulse 2.4s ease-in-out infinite}
+#pl-art img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;pointer-events:none}
 @keyframes artPulse{
   0%,100%{transform:scale(1);box-shadow:0 8px 40px rgba(0,0,0,.18)}
   50%{transform:scale(1.028);box-shadow:0 12px 52px rgba(249,115,22,.38)}
@@ -230,7 +231,7 @@ body{display:flex;flex-direction:column}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Scan
       </button>
-      <button class="hbtn ico-only" id="add-btn" aria-label="Tilfoej filer">
+      <button class="hbtn ico-only" id="add-btn" aria-label="Add files">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
       <button class="hbtn ico-only" id="menu-btn" aria-label="Mere">
@@ -240,7 +241,7 @@ body{display:flex;flex-direction:column}
     <div id="search-row">
       <div id="search-wrap">
         <span class="si"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
-        <input id="search" type="search" placeholder="Soeg titel, kunstner, album..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <input id="search" type="search" placeholder="Search title, artist, album..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
         <button id="search-clear">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -249,7 +250,7 @@ body{display:flex;flex-direction:column}
     <div id="chips">
       <button class="chip on" data-v="all">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        Alle
+        All
       </button>
       <button class="chip" data-v="albums">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
@@ -257,11 +258,11 @@ body{display:flex;flex-direction:column}
       </button>
       <button class="chip" data-v="artists">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Kunstner
+        Artist
       </button>
       <button class="chip" data-v="fav">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        Favoritter
+        Favorites
       </button>
     </div>
     <div id="list"></div>
@@ -275,7 +276,7 @@ body{display:flex;flex-direction:column}
       </button>
       <div id="pl-hdr-meta">
         <div id="pl-hdr-title">HarbuPlayer</div>
-        <div id="pl-hdr-sub">Afspilles nu</div>
+        <div id="pl-hdr-sub">Now Playing</div>
       </div>
     </div>
     <div id="pl-body">
@@ -283,8 +284,8 @@ body{display:flex;flex-direction:column}
         <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity=".35"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       </div>
       <div id="pl-info">
-        <div id="pl-title">Ingen sang valgt</div>
-        <div id="pl-artist">Vaelg en sang i biblioteket</div>
+        <div id="pl-title">No track selected</div>
+        <div id="pl-artist">Select a track from the library</div>
       </div>
       <div id="pl-prog">
         <div id="pl-bar">
@@ -332,8 +333,8 @@ body{display:flex;flex-direction:column}
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       </div>
       <div id="mini-meta">
-        <div id="mini-title">Ingen sang</div>
-        <div id="mini-artist" style="font-size:12px;color:var(--mu);margin-top:2px">Vaelg musik fra biblioteket</div>
+        <div id="mini-title">Nothing playing</div>
+        <div id="mini-artist" style="font-size:12px;color:var(--mu);margin-top:2px">Select music from the library</div>
       </div>
       <button id="mini-pp">
         <svg id="mini-ico" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -345,8 +346,8 @@ body{display:flex;flex-direction:column}
 <div id="scan-overlay">
   <div id="scan-box">
     <div class="sb-icon">🎵</div>
-    <div class="sb-title">Scanner musik...</div>
-    <div class="sb-sub" id="scan-sub">Finder lydfiler i mappen</div>
+    <div class="sb-title">Scanning music...</div>
+    <div class="sb-sub" id="scan-sub">Finding audio files...</div>
     <div class="sb-prog"><div class="sb-fill" id="scan-fill"></div></div>
   </div>
 </div>
@@ -365,8 +366,8 @@ body{display:flex;flex-direction:column}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
     </div>
     <div class="mnu-txt">
-      <div class="mnu-lbl">Opdater bibliotek</div>
-      <div class="mnu-sub">Genindlaes listen fra lageret</div>
+      <div class="mnu-lbl">Refresh library</div>
+      <div class="mnu-sub">Reload list from storage</div>
     </div>
   </button>
 
@@ -375,8 +376,8 @@ body{display:flex;flex-direction:column}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
     </div>
     <div class="mnu-txt">
-      <div class="mnu-lbl">Ryd biblioteket</div>
-      <div class="mnu-sub">Fjerner alle sange fra appen</div>
+      <div class="mnu-lbl">Clear library</div>
+      <div class="mnu-sub">Removes all tracks from the app</div>
     </div>
   </button>
 
@@ -388,9 +389,9 @@ body{display:flex;flex-direction:column}
     </div>
     <div class="mnu-txt">
       <div class="mnu-lbl">Skin</div>
-      <div class="mnu-sub">Tilpas udseende og farver</div>
+      <div class="mnu-sub">Customise appearance</div>
     </div>
-    <div class="mnu-badge">Snart</div>
+    <div class="mnu-badge">Soon</div>
   </button>
 
   <button class="mnu-item" disabled>
@@ -399,9 +400,9 @@ body{display:flex;flex-direction:column}
     </div>
     <div class="mnu-txt">
       <div class="mnu-lbl">Playback</div>
-      <div class="mnu-sub">Afspilningsindstillinger</div>
+      <div class="mnu-sub">Playback settings</div>
     </div>
-    <div class="mnu-badge">Snart</div>
+    <div class="mnu-badge">Soon</div>
   </button>
 
   <button class="mnu-item" disabled>
@@ -410,12 +411,12 @@ body{display:flex;flex-direction:column}
     </div>
     <div class="mnu-txt">
       <div class="mnu-lbl">Device Info</div>
-      <div class="mnu-sub">Enhedsinformation og lager</div>
+      <div class="mnu-sub">Device info & storage</div>
     </div>
-    <div class="mnu-badge">Snart</div>
+    <div class="mnu-badge">Soon</div>
   </button>
 
-  <button id="mnu-cancel">Luk</button>
+  <button id="mnu-cancel">Close</button>
 </div>
 
 <script>
@@ -544,11 +545,11 @@ async function gatherFilesFromDir(dirHandle, acc){
 async function scanWithPicker(){
   try {
     var handle = await window.showDirectoryPicker({ mode:'read', startIn:'music' });
-    showScanUI(0, 0, 'Finder lydfiler...');
+    showScanUI(0, 0, 'Finding audio files...');
     var files = await gatherFilesFromDir(handle, []);
     if(!files.length){
       hideScanUI();
-      toast('Ingen lydfiler fundet i mappen');
+      toast('No audio files found in folder');
       return;
     }
     await processFiles(files);
@@ -569,7 +570,7 @@ function showScanUI(done, total, msg){
   $('scan-fill').style.width = (total ? Math.round((done/total)*100) : 0)+'%';
 }
 function updateScanUI(done, total){
-  $('scan-sub').textContent = 'Laest: '+done+' / '+total;
+  $('scan-sub').textContent = 'Reading: '+done+' / '+total;
   $('scan-fill').style.width = (total ? Math.round((done/total)*100) : 0)+'%';
 }
 function hideScanUI(){
@@ -586,13 +587,13 @@ async function processFiles(files){
 
   if(!fresh.length){
     hideScanUI();
-    toast('Alle filer er allerede i biblioteket');
+    toast('All files are already in the library');
     return;
   }
 
   var total = fresh.length;
   var done = 0;
-  showScanUI(0, total, 'Laest: 0 / '+total);
+  showScanUI(0, total, 'Reading: 0 / '+total);
 
   for(var i=0; i<fresh.length; i++){
     var f = fresh[i];
@@ -603,7 +604,7 @@ async function processFiles(files){
       var rec = {
         name:   (tags.title  || fb.title).trim()  || fb.title,
         artist: (tags.artist || fb.artist).trim() || fb.artist,
-        album:  (tags.album  || 'Ukendt album').trim(),
+        album:  (tags.album  || 'Unknown album').trim(),
         fav: false, dur: null,
         fname: f.name, fsize: f.size,
         blob: f,
@@ -636,7 +637,7 @@ async function processFiles(files){
 
   hideScanUI();
   render();
-  toast('Tilfoejede '+done+(done===1?' sang':' sange'));
+  toast('Added '+done+(done===1?' track':' tracks'));
   saveMeta();
 }
 
@@ -655,7 +656,7 @@ function parseFallback(filename){
   var base = filename.replace(/\.[^/.]+$/,'');
   var m = base.split(' - ');
   if(m.length >= 2) return {artist:m[0].trim(), title:m.slice(1).join(' - ').trim()};
-  return {artist:'Ukendt kunstner', title:base};
+  return {artist:'Unknown artist', title:base};
 }
 
 // ================================================================
@@ -796,15 +797,19 @@ function prevTrack(){
 
 function updatePlayerUI(t){
   var hasArt = !!(t&&t.artUrl);
-  $('pl-title').textContent   = t ? t.name   : 'Ingen sang valgt';
-  $('pl-artist').textContent  = t ? t.artist+(t.album&&t.album!=='Ukendt album'?' \u00b7 '+t.album:'') : '';
+  $('pl-title').textContent   = t ? t.name   : 'No track selected';
+  $('pl-artist').textContent  = t ? t.artist+(t.album&&t.album!=='Unknown album'?' \u00b7 '+t.album:'') : '';
   $('pl-hdr-title').textContent = t ? t.name   : 'HarbuPlayer';
   $('pl-hdr-sub').textContent   = t ? t.artist : '';
   var art=$('pl-art');
-  art.style.backgroundImage = hasArt ? 'url('+t.artUrl+')' : '';
-  // Large player: use vinyl record as default, not music-note icon
-  art.innerHTML = hasArt ? '' : svgVinyl(80);
-  $('mini-title').textContent  = t ? t.name   : 'Ingen sang';
+  // Use <img> with object-fit:cover — more reliable than background-image for JPEG data
+  if(hasArt){
+    art.innerHTML='<img src="'+t.artUrl+'" alt="'+esc(t.album||'')+'" '
+      +'style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;">';
+  } else {
+    art.innerHTML=svgVinyl(80);
+  }
+  $('mini-title').textContent  = t ? t.name   : 'Nothing playing';
   $('mini-artist').textContent = t ? t.artist : '';
   var mart=$('mini-art');
   mart.style.backgroundImage = hasArt ? 'url('+t.artUrl+')' : '';
@@ -873,8 +878,8 @@ var _artQueue=[], _artFetching=false;
 function queueArtwork(rec){
   // Only queue if no art, artist/album is known, and we have connectivity
   if(rec.artUrl) return;
-  var hasArtist = rec.artist && rec.artist!=='Ukendt kunstner';
-  var hasAlbum  = rec.album  && rec.album !=='Ukendt album';
+  var hasArtist = rec.artist && rec.artist!=='Unknown artist';
+  var hasAlbum  = rec.album  && rec.album !=='Unknown album';
   if(!hasArtist && !hasAlbum) return;
   _artQueue.push(rec);
   if(!_artFetching) _drainArtQueue();
@@ -895,8 +900,8 @@ async function _drainArtQueue(){
 
 async function _fetchAndSaveArt(rec){
   var terms=[];
-  if(rec.artist&&rec.artist!=='Ukendt kunstner') terms.push(rec.artist);
-  if(rec.album &&rec.album !=='Ukendt album')    terms.push(rec.album);
+  if(rec.artist&&rec.artist!=='Unknown artist') terms.push(rec.artist);
+  if(rec.album &&rec.album !=='Unknown album')    terms.push(rec.album);
   var term=encodeURIComponent(terms.join(' '));
 
   var apiResp=await fetch('https://itunes.apple.com/search?term='+term+'&entity=album&limit=3&media=music');
@@ -905,7 +910,7 @@ async function _fetchAndSaveArt(rec){
   if(!data.results||!data.results.length) return;
 
   // Use the best match (first result)
-  var artUrl=(data.results[0].artworkUrl100||'').replace('100x100bb','600x600bb');
+  var artUrl=(data.results[0].artworkUrl100||'').replace('100x100bb','1000x1000bb');
   if(!artUrl) return;
 
   var imgResp=await fetch(artUrl);
@@ -939,13 +944,13 @@ function render(){
   var vis=getVisible();
   if(!lib.length){
     list.innerHTML='<div class="state"><div class="big">\uD83C\uDFB5</div>'
-      +'<div>Tryk <b>Scan</b> for at vaelge en musikmappe<br>'
-      +'eller <b>+</b> for at tilfoeje filer enkeltvis.<br><br>'
-      +'<span style="font-size:12px;opacity:.7">Scan kan bruges flere gange<br>for at tilfoeje mapper successivt</span></div></div>';
+      +'<div>Press <b>Scan</b> to select a music folder<br>'
+      +'or <b>+</b> to add individual files.<br><br>'
+      +'<span style="font-size:12px;opacity:.7">Scan can be used multiple times<br>to add more folders</span></div></div>';
     return;
   }
   if(!vis.length){
-    var msg=view==='fav'?'Ingen favoritter.<br>Tryk p\u00e5 hjertet ved en sang.':'Ingen sange matcher soegningen.';
+    var msg=view==='fav'?'No favorites.<br>Tap the heart icon on a track.':'No tracks match your search.';
     list.innerHTML='<div class="state"><div class="big">\uD83D\uDD0D</div><div>'+msg+'</div></div>';
     return;
   }
@@ -971,7 +976,7 @@ function render(){
         +'<div class="grp-art"'+artSty+'>'+artIn+'</div>'
         +'<div class="grp-meta">'
         +'<span class="grp-name">'+esc(g)+'</span>'
-        +'<span class="grp-cnt">'+groups[g].length+(groups[g].length===1?' sang':' sange')+'</span>'
+        +'<span class="grp-cnt">'+groups[g].length+(groups[g].length===1?' track':' tracks')+'</span>'
         +'</div>'
         +chevron
         +'</div>';
@@ -1090,7 +1095,7 @@ audio.addEventListener('pause',function(){
   $('pl-art').classList.remove('playing');
   if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused';
 });
-audio.addEventListener('error',function(){ toast('Kunne ikke afspille filen'); });
+audio.addEventListener('error',function(){ toast('Could not play this file'); });
 
 // ================================================================
 // SEEK
@@ -1122,10 +1127,10 @@ $('dir-input').addEventListener('change',function(){
   if(this.files&&this.files.length){
     var arr=Array.from(this.files).filter(function(f){return isAudio(f.name);});
     if(arr.length){
-      showScanUI(0,arr.length,'Behandler '+arr.length+' filer...');
+      showScanUI(0,arr.length,'Processing '+arr.length+' files...');
       processFiles(arr);
     } else {
-      toast('Ingen lydfiler fundet');
+      toast('No audio files found');
     }
   }
   this.value='';
@@ -1137,7 +1142,7 @@ $('add-btn').addEventListener('click',function(){
 $('file-input').addEventListener('change',function(){
   if(this.files&&this.files.length){
     var arr=Array.from(this.files);
-    showScanUI(0,arr.length,'Tilfojer '+arr.length+' filer...');
+    showScanUI(0,arr.length,'Adding '+arr.length+' files...');
     processFiles(arr);
   }
   this.value='';
@@ -1183,7 +1188,7 @@ $('mnu-cancel').addEventListener('click', closeMenu);
 $('mi-refresh').addEventListener('click',function(){
   closeMenu();
   render();
-  toast('Biblioteksliste opdateret \u2713');
+  toast('Library updated \u2713');
 });
 
 // Manage → Clear library
@@ -1191,8 +1196,8 @@ $('mi-clear').addEventListener('click',function(){
   closeMenu();
   // Wait for sheet to close before native confirm
   setTimeout(function(){
-    if(!lib.length){ toast('Biblioteket er allerede tomt'); return; }
-    if(confirm('Ryd biblioteket?\n\nFjerner alle '+lib.length+' sange fra appen.\nDine filer paa telefonen bevaeres.')){
+    if(!lib.length){ toast('Library is already empty'); return; }
+    if(confirm('Clear library?\n\nThis removes all '+lib.length+' tracks from the app.\nYour files on the device are kept.')){
       lib.forEach(function(t){
         try{URL.revokeObjectURL(t.url);}catch(e){}
         try{if(t.artUrl)URL.revokeObjectURL(t.artUrl);}catch(e){}
@@ -1202,7 +1207,7 @@ $('mi-clear').addEventListener('click',function(){
       audio.pause(); audio.src='';
       $('mini').classList.remove('vis');
       render();
-      toast('Bibliotek ryddet');
+      toast('Library cleared');
     }
   }, 320);
 });
@@ -1345,7 +1350,7 @@ function installPWA(){
   var manifest={
     name:'HarbuPlayer',
     short_name:'Harbu',
-    description:'Din personlige musikafspiller',
+    description:'Your personal music player',
     start_url:location.pathname,
     scope:location.pathname.replace(/[^/]*$/,''),
     display:'standalone',
