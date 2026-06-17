@@ -7,10 +7,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="GroovePlayer">
+<meta name="apple-mobile-web-app-title" content="HarbuPlayer">
 <meta name="description" content="Din personlige musikafspiller">
 <link rel="manifest" id="pwa-manifest">
-<title>GroovePlayer</title>
+<title>HarbuPlayer</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -190,7 +190,7 @@ body{display:flex;flex-direction:column}
   <div class="screen" id="library">
     <div id="lib-hdr">
       <span style="font-size:22px">🦈</span>
-      <span class="logo">GroovePlayer</span>
+      <span class="logo">HarbuPlayer</span>
       <button class="hbtn" id="scan-btn">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Scan
@@ -239,7 +239,7 @@ body{display:flex;flex-direction:column}
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div id="pl-hdr-meta">
-        <div id="pl-hdr-title">Grooveplayer</div>
+        <div id="pl-hdr-title">HarbuPlayer</div>
         <div id="pl-hdr-sub">Afspilles nu</div>
       </div>
     </div>
@@ -364,7 +364,7 @@ function trackById(id){
 // ================================================================
 // INDEXEDDB
 // ================================================================
-var DB_NAME = 'grooveplayer_v3';
+var DB_NAME = 'harbu_v3';
 var db;
 
 function openDB(){
@@ -640,17 +640,30 @@ function playFromGroup(id, groupTracks){
   queue=groupTracks.map(function(x){return x.id;});
   qpos=queue.indexOf(id);
   if(qpos===-1){ qpos=0; }
+  // Open the group when you start playing from it (user-initiated, not on every render)
+  var key=view==='albums'?'album':'artist';
+  openGroups[t[key]]=true;
+  curId=id;
   _startPlayback(id, t);
 }
 
 function _startPlayback(id, t){
   curId=id;
+  // Update MediaSession BEFORE play() so Chrome knows the session is active
+  setMediaSession(t);
   audio.src=t.url;
   audio.volume=$('vol-slider').value/100;
-  audio.play().catch(function(){});
+  var p=audio.play();
+  if(p){
+    p.catch(function(e){
+      // NotAllowedError in background — retry once after a short delay
+      if(e.name==='NotAllowedError'||e.name==='AbortError'){
+        setTimeout(function(){ audio.play().catch(function(){}); }, 300);
+      }
+    });
+  }
   updatePlayerUI(t);
   render();
-  setMediaSession(t);
   saveMeta();
 }
 
@@ -663,7 +676,11 @@ function nextTrack(){
   if(!queue.length) return;
   if(shuffle) qpos=Math.floor(Math.random()*queue.length);
   else qpos=(qpos+1)%queue.length;
-  play(queue[qpos]);
+  var id=queue[qpos];
+  var t=trackById(id); if(!t) return;
+  // Go directly to _startPlayback — do NOT call play() which would rebuild the queue
+  curId=id;
+  _startPlayback(id, t);
 }
 
 function prevTrack(){
@@ -671,14 +688,17 @@ function prevTrack(){
   if(!queue.length) return;
   if(shuffle) qpos=Math.floor(Math.random()*queue.length);
   else qpos=(qpos-1+queue.length)%queue.length;
-  play(queue[qpos]);
+  var id=queue[qpos];
+  var t=trackById(id); if(!t) return;
+  curId=id;
+  _startPlayback(id, t);
 }
 
 function updatePlayerUI(t){
   var hasArt = !!(t&&t.artUrl);
   $('pl-title').textContent   = t ? t.name   : 'Ingen sang valgt';
   $('pl-artist').textContent  = t ? t.artist+(t.album&&t.album!=='Ukendt album'?' \u00b7 '+t.album:'') : '';
-  $('pl-hdr-title').textContent = t ? t.name   : 'GroovePlayer';
+  $('pl-hdr-title').textContent = t ? t.name   : 'HarbuPlayer';
   $('pl-hdr-sub').textContent   = t ? t.artist : '';
   var art=$('pl-art');
   art.style.backgroundImage = hasArt ? 'url('+t.artUrl+')' : '';
@@ -702,6 +722,8 @@ function setMediaSession(t){
   navigator.mediaSession.metadata=new MediaMetadata({
     title:t.name, artist:t.artist, album:t.album, artwork:art
   });
+  // Tell Android Chrome to keep the audio session alive in background
+  navigator.mediaSession.playbackState='playing';
   navigator.mediaSession.setActionHandler('play',       function(){ audio.play(); });
   navigator.mediaSession.setActionHandler('pause',      function(){ audio.pause(); });
   navigator.mediaSession.setActionHandler('nexttrack',  nextTrack);
@@ -833,11 +855,8 @@ function render(){
     var groups={};
     vis.forEach(function(t){ (groups[t[key]]=groups[t[key]]||[]).push(t); });
 
-    // Auto-open the group that contains the current track
-    if(curId){
-      var ct=trackById(curId);
-      if(ct) openGroups[ct[key]]=true;
-    }
+    // NOTE: openGroups is the single source of truth — never forced open here.
+    // Groups are opened either by user tap, or by playFromGroup() when playback starts.
 
     Object.keys(groups).sort(function(a,b){return a.localeCompare(b,'da');}).forEach(function(g){
       var isOpen=!!openGroups[g];
@@ -963,11 +982,13 @@ audio.addEventListener('play',function(){
   $('pl-ico').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
   $('mini-ico').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
   $('pl-art').classList.add('playing');
+  if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing';
 });
 audio.addEventListener('pause',function(){
   $('pl-ico').innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';
   $('mini-ico').innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';
   $('pl-art').classList.remove('playing');
+  if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused';
 });
 audio.addEventListener('error',function(){ toast('Kunne ikke afspille filen'); });
 
@@ -1174,8 +1195,8 @@ function installPWA(){
 
   // Build manifest blob
   var manifest={
-    name:'GroovePlayer',
-    short_name:'Groove',
+    name:'HarbuPlayer',
+    short_name:'Harbu',
     description:'Din personlige musikafspiller',
     start_url:location.pathname,
     scope:location.pathname.replace(/[^/]*$/,''),
