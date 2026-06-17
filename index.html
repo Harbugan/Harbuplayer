@@ -231,6 +231,16 @@ body{display:flex;flex-direction:column}
 #mnu-cancel:active{background:var(--ol)}
 .h-inp{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .scroll-anchor{height:calc(72px + var(--safe-bot));flex-shrink:0}
+/* ---- sort row ---- */
+#sort-row{display:flex;align-items:center;gap:6px;padding:6px 14px 8px;
+  background:var(--surf);border-bottom:1px solid var(--bd);flex-shrink:0}
+#sort-lbl{font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.06em;
+  text-transform:uppercase;white-space:nowrap;flex-shrink:0;margin-right:2px}
+.sort-pill{background:var(--bg);border:1.5px solid var(--bd);color:var(--mu);
+  border-radius:20px;padding:4px 11px;font-size:12px;font-weight:500;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+  -webkit-appearance:none;appearance:none;line-height:1.4}
+.sort-pill.on{background:var(--o);border-color:var(--o);color:#fff;font-weight:600}
 </style>
 </head>
 <body>
@@ -268,6 +278,13 @@ body{display:flex;flex-direction:column}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         Favorites
       </button>
+    </div>
+    <div id="sort-row">
+      <span id="sort-lbl">Sort</span>
+      <button class="sort-pill on" data-s="recent">Recent</button>
+      <button class="sort-pill" data-s="title">Title</button>
+      <button class="sort-pill" data-s="artist">Artist</button>
+      <button class="sort-pill" data-s="album">Album</button>
     </div>
     <div id="list"></div>
     <div class="scroll-anchor"></div>
@@ -463,6 +480,7 @@ var curId = null;
 var queue = [];
 var qpos = -1;
 var view = 'all';
+var sort = 'recent';   // 'recent' | 'title' | 'artist' | 'album'
 var searchQ = '';
 var shuffle = false;
 var repeat = false;
@@ -886,6 +904,21 @@ function getVisible(){
   if(q) arr=arr.filter(function(t){
     return (t.name+' '+t.artist+' '+t.album).toLowerCase().indexOf(q)!==-1;
   });
+  // Apply sort
+  if(sort==='title'){
+    arr.sort(function(a,b){return a.name.localeCompare(b.name,'da',{sensitivity:'base'});});
+  } else if(sort==='artist'){
+    arr.sort(function(a,b){
+      var c=a.artist.localeCompare(b.artist,'da',{sensitivity:'base'});
+      return c!==0?c:a.name.localeCompare(b.name,'da',{sensitivity:'base'});
+    });
+  } else if(sort==='album'){
+    arr.sort(function(a,b){
+      var c=a.album.localeCompare(b.album,'da',{sensitivity:'base'});
+      return c!==0?c:a.name.localeCompare(b.name,'da',{sensitivity:'base'});
+    });
+  }
+  // 'recent' keeps insertion order (lib is ordered by autoincrement id)
   return arr;
 }
 
@@ -982,8 +1015,8 @@ function render(){
   var vis=getVisible();
   if(!lib.length){
     list.innerHTML='<div class="state"><div class="big">\uD83C\uDFB5</div>'
-      +'<div>Press the <b>... button</b> to add music<br>'
-      +'You can add a folder or induvidual files.<br><br>'
+      +'<div>Press the <b>...</b> to add music<br>'
+      +'or <b>+</b> you can add a folder or induvidual files.<br><br>'
       +'<span style="font-size:12px;opacity:.7">Add Music can be used multiple times<br>to add more folders or files</span></div></div>';
     return;
   }
@@ -1041,6 +1074,7 @@ function saveMeta(){
   try {
     dbMeta('curId',curId);
     dbMeta('view',view);
+    dbMeta('sort',sort);
     dbMeta('vol',$('vol-slider').value);
     dbMeta('shuffle',shuffle);
     dbMeta('repeat',repeat);
@@ -1092,6 +1126,7 @@ async function loadLibrary(){
       lib.push(rec);
     });
     var sv=await dbMeta('view');       if(sv)    view=sv;
+    var so=await dbMeta('sort');       if(so)    sort=so;
     var vol=await dbMeta('vol');       if(vol)   $('vol-slider').value=vol;
     var sh=await dbMeta('shuffle');    if(sh!=null) shuffle=!!sh;
     var rp=await dbMeta('repeat');     if(rp!=null) repeat=!!rp;
@@ -1101,6 +1136,9 @@ async function loadLibrary(){
     $('b-rep').classList.toggle('on',repeat);
     document.querySelectorAll('.chip').forEach(function(c){
       c.classList.toggle('on',c.dataset.v===view);
+    });
+    document.querySelectorAll('.sort-pill').forEach(function(p){
+      p.classList.toggle('on',p.dataset.s===sort);
     });
 
     if(ci && trackById(ci)){
@@ -1356,6 +1394,15 @@ $('chips').addEventListener('click',function(e){
   if(!btn) return;
   view=btn.dataset.v;
   document.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('on',c===btn);});
+  render();
+  saveMeta();
+});
+
+$('sort-row').addEventListener('click',function(e){
+  var btn=e.target.closest('.sort-pill');
+  if(!btn) return;
+  sort=btn.dataset.s;
+  document.querySelectorAll('.sort-pill').forEach(function(p){p.classList.toggle('on',p===btn);});
   render();
   saveMeta();
 });
