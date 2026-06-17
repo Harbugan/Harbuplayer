@@ -297,6 +297,20 @@ body{display:flex;flex-direction:column}
   cursor:pointer;white-space:nowrap;flex-shrink:0;
   -webkit-appearance:none;appearance:none;line-height:1.4}
 .sort-pill.on{background:var(--o);border-color:var(--o);color:#fff;font-weight:600}
+/* ---- version row ---- */
+.mnu-item.mnu-static{cursor:default}
+.mnu-item.mnu-static:active{background:none}
+.mnu-update-btn{
+  background:var(--o);border:none;color:#fff;
+  border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;
+  cursor:pointer;display:none;align-items:center;gap:5px;
+  -webkit-appearance:none;appearance:none;white-space:nowrap;flex-shrink:0
+}
+.mnu-update-btn.vis{display:flex}
+.mnu-update-btn:active{background:var(--od)}
+.mnu-update-btn[disabled]{opacity:.65;cursor:default}
+.mnu-update-btn svg{flex-shrink:0}
+.mnu-update-btn.spin svg{animation:spin .9s linear infinite}
 </style>
 </head>
 <body>
@@ -529,12 +543,33 @@ body{display:flex;flex-direction:column}
     <div class="mnu-badge">Soon</div>
   </button>
 
+  <div class="mnu-item mnu-static" id="mi-version">
+    <div class="mnu-ico">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+    </div>
+    <div class="mnu-txt">
+      <div class="mnu-lbl">Version</div>
+      <div class="mnu-sub" id="mi-version-sub">—</div>
+    </div>
+    <button class="mnu-update-btn" id="mi-update-btn" aria-label="Update to latest version">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg>
+      <span id="mi-update-lbl">Update</span>
+    </button>
+  </div>
+
   <button id="mnu-cancel">Close</button>
 </div>
 
 <script>
 (function(){
 'use strict';
+
+// ================================================================
+// APP CONFIG — bump APP_VERSION on every GitHub release.
+// GITHUB_REPO must match the path on github.com (e.g. "octocat/hello-world").
+// ================================================================
+var APP_VERSION = 'v1.0.0';
+var GITHUB_REPO = 'YOUR_USERNAME/YOUR_REPO';   // <-- EDIT THIS
 
 // ================================================================
 // STATE
@@ -1405,6 +1440,8 @@ $('file-input').addEventListener('change',function(){
 function openMenu(){
   $('menu-overlay').classList.add('vis');
   $('menu-sheet').classList.add('vis');
+  // Fire and forget — cached for 10 min, won't spam GitHub
+  refreshVersionUI();
 }
 function closeMenu(){
   $('menu-overlay').classList.remove('vis');
@@ -1605,6 +1642,118 @@ $('b-rep').addEventListener('click',function(){
 $('vol-slider').addEventListener('input',function(){
   audio.volume=this.value/100; saveMeta();
 });
+
+// ================================================================
+// VERSION CHECK / UPDATE
+// ================================================================
+var _versionCache = null; // { remote, fetchedAt }
+var VERSION_TTL_MS = 10 * 60 * 1000; // 10 min — gentle on GitHub rate limit
+
+function _normVer(v){
+  return String(v||'').trim().replace(/^v/i,'');
+}
+// Returns true if `remote` is strictly newer than `local` using dotted-number compare.
+function _isNewerVersion(remote, local){
+  if(!remote || !local) return false;
+  var r = _normVer(remote).split(/[.\-+]/).map(function(n){return parseInt(n,10);});
+  var l = _normVer(local).split(/[.\-+]/).map(function(n){return parseInt(n,10);});
+  var len = Math.max(r.length, l.length);
+  for(var i=0;i<len;i++){
+    var rv = isNaN(r[i]) ? 0 : r[i];
+    var lv = isNaN(l[i]) ? 0 : l[i];
+    if(rv > lv) return true;
+    if(rv < lv) return false;
+  }
+  return false;
+}
+
+async function fetchLatestVersion(force){
+  // Skip the network entirely if repo placeholder hasn't been set
+  if(!GITHUB_REPO || GITHUB_REPO.indexOf('YOUR_') === 0) return null;
+  if(!navigator.onLine) return null;
+
+  var now = Date.now();
+  if(!force && _versionCache && (now - _versionCache.fetchedAt) < VERSION_TTL_MS){
+    return _versionCache.remote;
+  }
+  try {
+    var resp = await fetch('https://api.github.com/repos/'+GITHUB_REPO+'/releases/latest', {
+      headers:{ 'Accept':'application/vnd.github+json' },
+      cache:'no-store'
+    });
+    if(!resp.ok) return null;
+    var data = await resp.json();
+    var tag = data && data.tag_name ? String(data.tag_name) : null;
+    _versionCache = { remote:tag, fetchedAt:now };
+    return tag;
+  } catch(e){
+    return null;
+  }
+}
+
+async function refreshVersionUI(){
+  var sub = $('mi-version-sub');
+  var btn = $('mi-update-btn');
+  if(!sub || !btn) return;
+
+  // Initial state: show local version + checking
+  sub.textContent = APP_VERSION + ' \u00b7 checking\u2026';
+  btn.classList.remove('vis');
+
+  // Bad/placeholder repo — show version only
+  if(!GITHUB_REPO || GITHUB_REPO.indexOf('YOUR_') === 0){
+    sub.textContent = APP_VERSION;
+    return;
+  }
+
+  var remote = await fetchLatestVersion();
+  if(remote === null){
+    sub.textContent = APP_VERSION + ' \u00b7 ' + (navigator.onLine ? 'check failed' : 'offline');
+    return;
+  }
+  if(_isNewerVersion(remote, APP_VERSION)){
+    sub.textContent = APP_VERSION + ' \u2192 ' + remote + ' available';
+    btn.classList.add('vis');
+  } else {
+    sub.textContent = APP_VERSION + ' \u00b7 up to date';
+  }
+}
+
+async function performUpdate(){
+  var btn = $('mi-update-btn');
+  var lbl = $('mi-update-lbl');
+  if(btn){
+    btn.disabled = true;
+    btn.classList.add('spin');
+    if(lbl) lbl.textContent = 'Updating';
+  }
+  try {
+    // Save state so playback resumes after the hard reload
+    try { savePlaybackState(); } catch(e){}
+
+    // 1) Unregister all service workers so the next navigation hits the network
+    if('serviceWorker' in navigator){
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function(r){ return r.unregister(); }));
+    }
+    // 2) Wipe every Cache API entry (SW shell + anything else)
+    if('caches' in window){
+      var keys = await caches.keys();
+      await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+    }
+    // 3) Hard reload — short delay to let IndexedDB writes flush
+    setTimeout(function(){ location.reload(); }, 250);
+  } catch(e){
+    if(btn){
+      btn.disabled = false;
+      btn.classList.remove('spin');
+      if(lbl) lbl.textContent = 'Update';
+    }
+    toast('Update failed');
+  }
+}
+
+$('mi-update-btn').addEventListener('click', performUpdate);
 
 // ================================================================
 // PWA SETUP — manifest + icon generated at runtime, SW registered
