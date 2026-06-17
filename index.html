@@ -231,9 +231,15 @@ body{display:flex;flex-direction:column}
 #mnu-cancel:active{background:var(--ol)}
 .h-inp{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .scroll-anchor{height:calc(72px + var(--safe-bot));flex-shrink:0}
-/* ---- sort row ---- */
-#sort-row{display:flex;align-items:center;gap:6px;padding:6px 14px 8px;
-  background:var(--surf);border-bottom:1px solid var(--bd);flex-shrink:0}
+/* ---- sort row (collapsible) ---- */
+#sort-row{display:flex;align-items:center;gap:6px;padding:0 14px;
+  background:var(--surf);flex-shrink:0;
+  max-height:0;overflow:hidden;
+  border-bottom:1px solid transparent;
+  transition:max-height .25s cubic-bezier(.4,0,.2,1),
+             padding .25s cubic-bezier(.4,0,.2,1),
+             border-bottom-color .25s}
+#sort-row.open{max-height:50px;padding:6px 14px 8px;border-bottom-color:var(--bd)}
 #sort-lbl{font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.06em;
   text-transform:uppercase;white-space:nowrap;flex-shrink:0;margin-right:2px}
 .sort-pill{background:var(--bg);border:1.5px solid var(--bd);color:var(--mu);
@@ -481,6 +487,7 @@ var queue = [];
 var qpos = -1;
 var view = 'all';
 var sort = 'recent';   // 'recent' | 'title' | 'artist' | 'album'
+var sortOpen = false;  // sort row collapsed by default; toggled by clicking the active chip
 var searchQ = '';
 var shuffle = false;
 var repeat = false;
@@ -897,6 +904,10 @@ function setMediaSession(t){
 // ================================================================
 // RENDER
 // ================================================================
+// Strips a leading "The " from an album name for sort purposes only —
+// the displayed name is unchanged. Applied wherever album names are compared.
+function _stripThe(s){ return (s||'').replace(/^the\s+/i,''); }
+
 function getVisible(){
   var q=searchQ.trim().toLowerCase();
   var arr=lib.slice();
@@ -914,7 +925,7 @@ function getVisible(){
     });
   } else if(sort==='album'){
     arr.sort(function(a,b){
-      var c=a.album.localeCompare(b.album,'da',{sensitivity:'base'});
+      var c=_stripThe(a.album).localeCompare(_stripThe(b.album),'da',{sensitivity:'base'});
       return c!==0?c:a.name.localeCompare(b.name,'da',{sensitivity:'base'});
     });
   }
@@ -1039,6 +1050,18 @@ function render(){
         // Preserve insertion order: compare the id of the first track in each group
         return groups[a][0].id - groups[b][0].id;
       }
+      // Albums view + sort by Artist: two-level sort — artist first, then album (ignoring leading "The ")
+      if(view==='albums' && sort==='artist'){
+        var artA=groups[a][0].artist, artB=groups[b][0].artist;
+        var c=artA.localeCompare(artB,'da',{sensitivity:'base'});
+        if(c!==0) return c;
+        return _stripThe(a).localeCompare(_stripThe(b),'da',{sensitivity:'base'});
+      }
+      // Albums view (any other sort): order album groups alphabetically, ignoring "The "
+      if(view==='albums'){
+        return _stripThe(a).localeCompare(_stripThe(b),'da',{sensitivity:'base'});
+      }
+      // Artists view: order by artist name
       return a.localeCompare(b,'da',{sensitivity:'base'});
     }).forEach(function(g){
       var isOpen=!!openGroups[g];
@@ -1243,7 +1266,7 @@ audio.addEventListener('pause',function(){
   _stopSaveInterval();
   if(!_transitioning) savePlaybackState();  // skip the src-swap pause, save real pauses only
 });
-audio.addEventListener('error',function(){ toast('Playlist is empty'); });
+audio.addEventListener('error',function(){ toast('Could not play this file'); });
 
 // Save position when the user switches apps, locks screen, or closes the tab
 document.addEventListener('visibilitychange', function(){
@@ -1398,10 +1421,19 @@ $('search-clear').addEventListener('click',function(){
 $('chips').addEventListener('click',function(e){
   var btn=e.target.closest('.chip');
   if(!btn) return;
-  view=btn.dataset.v;
-  document.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('on',c===btn);});
-  render();
-  saveMeta();
+  var sameActive=(btn.dataset.v===view);
+
+  if(sameActive){
+    // Toggle the sort row when clicking the chip that's already active
+    sortOpen=!sortOpen;
+    $('sort-row').classList.toggle('open',sortOpen);
+  } else {
+    // Switch view; leave the sort row exactly as it was
+    view=btn.dataset.v;
+    document.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('on',c===btn);});
+    render();
+    saveMeta();
+  }
 });
 
 $('sort-row').addEventListener('click',function(e){
