@@ -1243,7 +1243,7 @@ audio.addEventListener('pause',function(){
   _stopSaveInterval();
   if(!_transitioning) savePlaybackState();  // skip the src-swap pause, save real pauses only
 });
-audio.addEventListener('error',function(){ toast('Could not play this file'); });
+audio.addEventListener('error',function(){ toast('Playlist is empty'); });
 
 // Save position when the user switches apps, locks screen, or closes the tab
 document.addEventListener('visibilitychange', function(){
