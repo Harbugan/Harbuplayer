@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  inject-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject version tag into index.html
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          sed -i "s/var APP_VERSION = '[^']*'/var APP_VERSION = '${TAG}'/" index.html
+
+      - name: Commit updated index.html
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "chore: set version to ${TAG}"
+          git push origin HEAD:main
