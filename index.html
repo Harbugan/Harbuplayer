@@ -1838,17 +1838,22 @@ async function refreshVersionUI(){
   var btn = $('mi-update-btn');
   if(!sub || !btn) return;
 
+  // Always reset button first
+  btn.classList.remove('vis');
+  btn.disabled = false;
+  btn.classList.remove('spin');
+  $('mi-update-lbl').textContent = 'Update';
+
   // Initial state: show local version + checking
   sub.textContent = APP_VERSION + ' \u00b7 checking\u2026';
-  btn.classList.remove('vis');
 
   // Bad/placeholder repo — show version only
-  if(!GITHUB_REPO || GITHUB_REPO.indexOf('YOUR_') === 0){
-    sub.textContent = APP_VERSION;
+  if(!GITHUB_REPO || GITHUB_REPO.indexOf('YOUR_') === 0 || GITHUB_REPO.indexOf('github.com') !== -1){
+    sub.textContent = APP_VERSION + ' \u00b7 set GITHUB_REPO to owner/repo';
     return;
   }
 
-  var remote = await fetchLatestVersion();
+  var remote = await fetchLatestVersion(true); // force fresh check on menu open
   if(remote === null){
     sub.textContent = APP_VERSION + ' \u00b7 ' + (navigator.onLine ? 'check failed' : 'offline');
     return;
@@ -1857,7 +1862,7 @@ async function refreshVersionUI(){
     sub.textContent = APP_VERSION + ' \u2192 ' + remote + ' available';
     btn.classList.add('vis');
   } else {
-    sub.textContent = APP_VERSION + ' \u00b7 up to date';
+    sub.textContent = APP_VERSION + ' \u00b7 up to date \u2713';
   }
 }
 
