@@ -126,6 +126,7 @@ body{display:flex;flex-direction:column}
   overflow:hidden;color:var(--o);background-size:cover;background-position:center}
 .grp-meta{flex:1;min-width:0}
 .grp-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.grp-artist{font-size:12px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;margin-bottom:1px}
 .grp-hdr.active .grp-name{color:var(--o)}
 .grp-cnt{font-size:12px;color:var(--mu);margin-top:2px;display:block}
 .grp-chev{color:var(--mu);flex-shrink:0;transition:transform .22s cubic-bezier(.4,0,.2,1)}
@@ -468,7 +469,7 @@ body{display:flex;flex-direction:column}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
     </div>
     <div class="mnu-txt">
-      <div class="mnu-lbl">Manage</div>
+      <div class="mnu-lbl">Manage Music</div>
       <div class="mnu-sub">Add, refresh or clear library</div>
     </div>
     <svg id="mnu-manage-chev" class="mnu-sec-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1347,9 +1348,11 @@ function render(){
       var artIn=coverTrack?'':'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
       var chevron='<svg class="grp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
+var artistLabel = view==='albums' ? '<span class="grp-artist">'+esc(groups[g][0].artist)+'</span>' : '';
       html+='<div class="grp-hdr'+(isOpen?' open':'')+(hasCur?' active':'')+'" data-grp="'+esc(g)+'">'
         +'<div class="grp-art"'+artSty+'>'+artIn+'</div>'
         +'<div class="grp-meta">'
+        +artistLabel
         +'<span class="grp-name">'+esc(g)+'</span>'
         +'<span class="grp-cnt">'+groups[g].length+(groups[g].length===1?' track':' tracks')+'</span>'
         +'</div>'
