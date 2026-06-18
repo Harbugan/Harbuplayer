@@ -1,7 +1,7 @@
 // HarbuPlayer Service Worker
 // Caches the app shell so the player loads instantly and works offline.
 
-var CACHE = 'grooveplayer-v1';
+var CACHE = 'harbuplayer-v1.0.0';
 
 // Files that make up the app shell
 var SHELL = ['./'];
