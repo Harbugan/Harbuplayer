@@ -13,10 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject version tag into index.html
+      - name: Inject version tag into index.html and sw.js
         run: |
           TAG="${{ github.event.release.tag_name }}"
           sed -i "s/var APP_VERSION = '[^']*'/var APP_VERSION = '${TAG}'/" index.html
+          sed -i "s/var CACHE = '[^']*'/var CACHE = 'harbuplayer-${TAG}'/" sw.js
 
       - name: Commit updated index.html
         run: |
