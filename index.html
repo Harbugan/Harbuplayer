@@ -793,10 +793,11 @@ async function processFiles(files){
       var tags = await parseID3(f);
       var fb = parseFallback(f.name);
 
-      var rec = {
+        var rec = {
         name:   (tags.title  || fb.title).trim()  || fb.title,
         artist: (tags.artist || fb.artist).trim() || fb.artist,
         album:  (tags.album  || 'Unknown album').trim(),
+        albumArtist: (tags.albumArtist || '').trim(),
         fav: false, dur: null,
         fname: f.name, fsize: f.size,
         blob: f,
@@ -871,13 +872,14 @@ function parseID3(file){
             var sz=ver>=4?syncsafe(u8,off+4):(u8[off+4]<<24|u8[off+5]<<16|u8[off+6]<<8|u8[off+7]);
             if(sz<=0||sz>500000){off+=10;continue;}
             var data=u8.slice(off+10,off+10+sz);
-            if(fid==='TIT2'||fid==='TPE1'||fid==='TALB'){
+            if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TALB'){
               var enc=data[0],str='';
               if(enc===0)           str=decLatin1(data.slice(1)); // ISO-8859-1 — covers Æ Ø Å
               else if(enc===3)      str=decUTF8(data.slice(1));   // UTF-8
               else if(enc===1||enc===2) str=decUTF16(data.slice(1)); // UTF-16
               if(fid==='TIT2')out.title=str.trim();
               else if(fid==='TPE1')out.artist=str.trim();
+              else if(fid==='TPE2')out.albumArtist=str.trim();
               else if(fid==='TALB')out.album=str.trim();
             } else if(fid==='APIC'){
               try{
@@ -1075,6 +1077,22 @@ function svgHeart(on){
 // Vinyl record SVG — used as default artwork when no cover is available.
 // Disc is neutral black so it sits cleanly under any skin; label uses var(--o).
 function svgVinyl(size){
+  // Returns the artist label to show for a group of tracks (album view).
+// Priority: TPE2 albumArtist → single artist → 2-3 artists listed → "Various Artists"
+function getDisplayArtist(tracks){
+  // Use albumArtist from the first track that has one
+  for(var i=0;i<tracks.length;i++){
+    if(tracks[i].albumArtist) return tracks[i].albumArtist;
+  }
+  // Collect unique track artists
+  var seen = {}, unique = [];
+  tracks.forEach(function(t){
+    var a = t.artist || 'Unknown artist';
+    if(!seen[a]){ seen[a]=true; unique.push(a); }
+  });
+  if(unique.length <= 3) return unique.join(', ');
+  return 'Various Artists';
+}
   size=size||72;
   return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
     +'<circle cx="50" cy="50" r="49" fill="#0a0a0a"/>'
@@ -1348,7 +1366,7 @@ function render(){
       var artIn=coverTrack?'':'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
       var chevron='<svg class="grp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
-var artistLabel = view==='albums' ? '<span class="grp-artist">'+esc(groups[g][0].artist)+'</span>' : '';
+var artistLabel = view==='albums' ? '<span class="grp-artist">'+esc(getDisplayArtist(groups[g]))+'</span>' : '';
       html+='<div class="grp-hdr'+(isOpen?' open':'')+(hasCur?' active':'')+'" data-grp="'+esc(g)+'">'
         +'<div class="grp-art"'+artSty+'>'+artIn+'</div>'
         +'<div class="grp-meta">'
