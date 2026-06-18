@@ -1076,8 +1076,7 @@ function svgHeart(on){
 
 // Vinyl record SVG — used as default artwork when no cover is available.
 // Disc is neutral black so it sits cleanly under any skin; label uses var(--o).
-function svgVinyl(size){
-  // Returns the artist label to show for a group of tracks (album view).
+// Returns the artist label to show for a group of tracks (album view).
 // Priority: TPE2 albumArtist → single artist → 2-3 artists listed → "Various Artists"
 function getDisplayArtist(tracks){
   // Use albumArtist from the first track that has one
@@ -1093,6 +1092,8 @@ function getDisplayArtist(tracks){
   if(unique.length <= 3) return unique.join(', ');
   return 'Various Artists';
 }
+
+function svgVinyl(size){
   size=size||72;
   return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
     +'<circle cx="50" cy="50" r="49" fill="#0a0a0a"/>'
