@@ -791,9 +791,9 @@ async function processFiles(files){
         : null;
 
       // duration async (non-blocking)
-      (function(r){
-        getDuration(r.url).then(function(d){ r.dur=d; render(); }).catch(function(){});
-      })(rec);
+    //  (function(r){
+    //    getDuration(r.url).then(function(d){ r.dur=d; render(); }).catch(function(){});
+    //  })(rec);
 
       lib.push(rec);
       done++;
