@@ -798,7 +798,7 @@ async function processFiles(files){
       lib.push(rec);
       done++;
       updateScanUI(done, total);
-      if(done % 8 === 0) render();
+      if(done % 25 === 0) render();
 
       // Queue background artwork fetch if no embedded cover was found
       if(!rec.artUrl) queueArtwork(rec);
@@ -1114,7 +1114,7 @@ async function _applyPicToTrack(rec, pic){
     rec.artUrl = URL.createObjectURL(blob);
   } catch(e){ rec.artUrl = null; }
   try { await dbPut(rec); } catch(e){}
-  render();
+  patchArtworkInDOM(rec);
   if(rec.id === curId) updatePlayerUI(rec);
 }
 
@@ -1137,10 +1137,39 @@ async function _applyPicToAlbum(key, pic){
   await Promise.all(updates.map(function(t){
     try { return dbPut(t); } catch(e){ return Promise.resolve(); }
   }));
-  render();
+  updates.forEach(patchArtworkInDOM);
   if(curId){
     var cur = trackById(curId);
     if(cur && _albumKey(cur) === key) updatePlayerUI(cur);
+  }
+}
+
+// Patch artwork into already-rendered rows without a full re-render.
+// Handles both flat rows (data-id) and group headers (data-grp).
+function patchArtworkInDOM(rec){
+  if(!rec || !rec.artUrl) return;
+  // Flat track rows
+  var row = $('list').querySelector('[data-id="'+rec.id+'"]');
+  if(row){
+    var ico = row.querySelector('.ico');
+    if(ico){
+      ico.style.backgroundImage = 'url('+rec.artUrl+')';
+      ico.innerHTML = '';
+    }
+  }
+  // Group headers in album/artist view — find any header whose first covered
+  // track is this record, or update if header currently has no art.
+  var key = view==='albums' ? 'album' : 'artist';
+  var groupName = rec[key];
+  if(groupName){
+    var hdr = $('list').querySelector('.grp-hdr[data-grp="'+groupName.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"]');
+    if(hdr){
+      var grpArt = hdr.querySelector('.grp-art');
+      if(grpArt && !grpArt.style.backgroundImage){
+        grpArt.style.backgroundImage = 'url('+rec.artUrl+')';
+        grpArt.innerHTML = '';
+      }
+    }
   }
 }
 
@@ -1652,10 +1681,12 @@ $('mi-clear').addEventListener('click',function(){
   }, 320);
 });
 
+var _searchTimer = null;
 $('search').addEventListener('input',function(){
   searchQ=this.value;
   $('search-clear').classList.toggle('vis',!!this.value);
-  render();
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(render, 120);
 });
 $('search-clear').addEventListener('click',function(){
   $('search').value=''; searchQ='';
