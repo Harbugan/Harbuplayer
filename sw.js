@@ -1,7 +1,7 @@
 // HarbuPlayer Service Worker
 // Caches the app shell so the player loads instantly and works offline.
 
-var CACHE = 'harbuplayer-v1.0.0';
+var CACHE = 'harbuplayer-v0.0.5';
 
 // Files that make up the app shell
 var SHELL = ['./'];
