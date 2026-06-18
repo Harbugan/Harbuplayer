@@ -437,7 +437,7 @@ body{display:flex;flex-direction:column}
 <div id="scan-overlay">
   <div id="scan-box">
     <div class="sb-icon">🎵</div>
-    <div class="sb-title">Adding music...</div>
+    <div class="sb-title" id="scan-title">Adding music...</div>
     <div class="sb-sub" id="scan-sub">Finding audio files...</div>
     <div class="sb-prog"><div class="sb-fill" id="scan-fill"></div></div>
   </div>
@@ -477,6 +477,16 @@ body{display:flex;flex-direction:column}
         </button>
       </div>
     </div>
+
+    <button class="mnu-item" id="mi-fetch-meta">
+      <div class="mnu-ico">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+      </div>
+      <div class="mnu-txt">
+        <div class="mnu-lbl">Hent metadata</div>
+        <div class="mnu-sub">Læs ID3, duration og manglende covers</div>
+      </div>
+    </button>
 
     <button class="mnu-item" id="mi-refresh">
       <div class="mnu-ico">
@@ -568,7 +578,7 @@ body{display:flex;flex-direction:column}
 // APP CONFIG — bump APP_VERSION on every GitHub release.
 // GITHUB_REPO must match the path on github.com (e.g. "octocat/hello-world").
 // ================================================================
-var APP_VERSION = 'v0.0.5';
+var APP_VERSION = 'v0.0.6';
 var GITHUB_REPO = 'Harbugan/Harbuplayer';   // <-- EDIT THIS
 
 // ================================================================
@@ -662,6 +672,21 @@ function dbAdd(rec){
     r.onerror=function(){ rej(r.error); };
   });
 }
+function dbAddMany(records){
+  return new Promise(function(res,rej){
+    if(!records.length){ res([]); return; }
+    var tx=db.transaction('tracks','readwrite');
+    var st=tx.objectStore('tracks');
+    var ids=new Array(records.length);
+    tx.oncomplete=function(){ res(ids); };
+    tx.onerror=function(){ rej(tx.error); };
+    tx.onabort=function(){ rej(tx.error); };
+    records.forEach(function(rec, idx){
+      var r=st.add(rec);
+      r.onsuccess=function(){ ids[idx]=r.result; };
+    });
+  });
+}
 function dbPut(rec){
   return new Promise(function(res,rej){
     var r=dbTx('tracks','readwrite').put(rec);
@@ -736,13 +761,14 @@ async function scanWithPicker(){
 // ================================================================
 // SCAN UI
 // ================================================================
-function showScanUI(done, total, msg){
+function showScanUI(done, total, msg, title){
   $('scan-overlay').classList.add('vis');
+  $('scan-title').textContent = title || 'Adding music...';
   $('scan-sub').textContent = msg;
   $('scan-fill').style.width = (total ? Math.round((done/total)*100) : 0)+'%';
 }
-function updateScanUI(done, total){
-  $('scan-sub').textContent = 'Reading: '+done+' / '+total;
+function updateScanUI(done, total, msg){
+  $('scan-sub').textContent = msg || ('Reading: '+done+' / '+total);
   $('scan-fill').style.width = (total ? Math.round((done/total)*100) : 0)+'%';
 }
 function hideScanUI(){
@@ -750,12 +776,38 @@ function hideScanUI(){
 }
 
 // ================================================================
-// PROCESS FILES — additive, deduplication
+// PROCESS FILES — fast additive import, deduplication
 // ================================================================
+function makeFastTrackRecord(f){
+  var fb = parseFallback(f.name);
+  return {
+    name: fb.title,
+    artist: fb.artist,
+    album: 'Unknown album',
+    fav: false,
+    dur: null,
+    fname: f.name,
+    fsize: f.size,
+    blob: f,
+    pic: null,
+    metaStatus: 'pending',
+    metadataFetched: false,
+    importedFast: true,
+    addedAt: Date.now()
+  };
+}
+
 async function processFiles(files){
   var existing = {};
   lib.forEach(function(t){ existing[t.fname+'|'+t.fsize]=true; });
-  var fresh = files.filter(function(f){ return !existing[f.name+'|'+f.size]; });
+  var fresh = [];
+  files.forEach(function(f){
+    if(!isAudio(f.name)) return;
+    var key = f.name+'|'+f.size;
+    if(existing[key]) return;
+    existing[key] = true;
+    fresh.push(f);
+  });
 
   if(!fresh.length){
     hideScanUI();
@@ -765,51 +817,46 @@ async function processFiles(files){
 
   var total = fresh.length;
   var done = 0;
-  showScanUI(0, total, 'Reading: 0 / '+total);
+  var added = 0;
+  var chunkSize = 50;
+  showScanUI(0, total, 'Adding quickly: 0 / '+total, 'Adding music...');
 
-  for(var i=0; i<fresh.length; i++){
-    var f = fresh[i];
+  for(var i=0; i<fresh.length; i+=chunkSize){
+    var chunk = fresh.slice(i, i+chunkSize);
+    var records = chunk.map(makeFastTrackRecord);
     try {
-      var tags = await parseID3(f);
-      var fb = parseFallback(f.name);
-
-      var rec = {
-        name:   (tags.title  || fb.title).trim()  || fb.title,
-        artist: (tags.artist || fb.artist).trim() || fb.artist,
-        album:  (tags.album  || 'Unknown album').trim(),
-        fav: false, dur: null,
-        fname: f.name, fsize: f.size,
-        blob: f,
-        pic: tags.pic || null
-      };
-
-      var id = await dbAdd(rec);
-      rec.id = id;
-      rec.url = URL.createObjectURL(f);
-      rec.artUrl = rec.pic
-        ? URL.createObjectURL(new Blob([rec.pic.data], {type: rec.pic.mime||'image/jpeg'}))
-        : null;
-
-      // duration async (non-blocking)
-      (function(r){
-        getDuration(r.url).then(function(d){ r.dur=d; render(); }).catch(function(){});
-      })(rec);
-
-      lib.push(rec);
-      done++;
-      updateScanUI(done, total);
-      if(done % 25 === 0) render();
-
-      // Queue background artwork fetch if no embedded cover was found
-      if(!rec.artUrl) queueArtwork(rec);
+      var ids = await dbAddMany(records);
+      for(var j=0; j<records.length; j++){
+        var rec = records[j];
+        rec.id = ids[j];
+        rec.url = URL.createObjectURL(rec.blob);
+        rec.artUrl = null;
+        lib.push(rec);
+        added++;
+      }
     } catch(e){
-      done++;
+      // Fallback to one-by-one writes if a batch transaction fails.
+      for(var k=0; k<records.length; k++){
+        try {
+          var one = records[k];
+          var id = await dbAdd(one);
+          one.id = id;
+          one.url = URL.createObjectURL(one.blob);
+          one.artUrl = null;
+          lib.push(one);
+          added++;
+        } catch(ex){}
+      }
     }
+    done += chunk.length;
+    updateScanUI(done, total, 'Adding quickly: '+done+' / '+total);
+    render();
+    await new Promise(function(r){ setTimeout(r, 0); });
   }
 
   hideScanUI();
   render();
-  toast('Added '+done+(done===1?' track':' tracks'));
+  toast('Added '+added+(added===1?' track':' tracks')+' fast');
   saveMeta();
 }
 
@@ -825,10 +872,133 @@ function getDuration(url){
 }
 
 function parseFallback(filename){
-  var base = filename.replace(/\.[^/.]+$/,'');
+  var base = (filename || '').replace(/\.[^/.]+$/,'');
   var m = base.split(' - ');
   if(m.length >= 2) return {artist:m[0].trim(), title:m.slice(1).join(' - ').trim()};
-  return {artist:'Unknown artist', title:base};
+  return {artist:'Unknown artist', title:base || 'Unknown title'};
+}
+
+function makeArtUrl(pic){
+  if(!pic) return null;
+  try { return URL.createObjectURL(new Blob([pic.data], {type: pic.mime || 'image/jpeg'})); }
+  catch(e){ return null; }
+}
+
+function needsMetadata(rec){
+  if(!rec || !rec.blob) return false;
+  if(rec.metaStatus === 'pending' || rec.metadataFetched === false) return true;
+  if(rec.metaStatus === 'error') return true;
+  if(rec.metaStatus === 'done' || rec.metadataFetched === true) return false;
+  return !rec.dur || rec.artist === 'Unknown artist' || rec.album === 'Unknown album' || (!rec.artUrl && !rec.pic);
+}
+
+var _metadataRunning = false;
+
+async function fetchMissingMetadata(){
+  if(_metadataRunning){ toast('Metadata scan is already running'); return; }
+  if(!lib.length){ toast('Library is empty'); return; }
+
+  var targets = lib.filter(needsMetadata);
+  if(!targets.length){ toast('All metadata is already fetched'); return; }
+
+  _metadataRunning = true;
+  var total = targets.length;
+  var done = 0;
+  var changed = 0;
+  var allowOnline = navigator.onLine;
+  showScanUI(0, total, 'Metadata: 0 / '+total, 'Henter metadata...');
+
+  try {
+    for(var i=0; i<targets.length; i++){
+      var rec = trackById(targets[i].id) || targets[i];
+      var didChange = false;
+      try {
+      var fb = parseFallback(rec.fname || rec.name || '');
+      var tags = await parseID3(rec.blob);
+
+      if(tags.title && tags.title.trim()){
+        rec.name = tags.title.trim();
+        didChange = true;
+      } else if(!rec.name){
+        rec.name = fb.title;
+        didChange = true;
+      }
+
+      if(tags.artist && tags.artist.trim()){
+        rec.artist = tags.artist.trim();
+        didChange = true;
+      } else if(!rec.artist){
+        rec.artist = fb.artist;
+        didChange = true;
+      }
+
+      if(tags.album && tags.album.trim()){
+        rec.album = tags.album.trim();
+        didChange = true;
+      } else if(!rec.album){
+        rec.album = 'Unknown album';
+        didChange = true;
+      }
+
+      if(tags.pic){
+        if(rec.artUrl){ try{ URL.revokeObjectURL(rec.artUrl); }catch(e){} }
+        rec.pic = tags.pic;
+        rec.artUrl = makeArtUrl(tags.pic);
+        didChange = true;
+      }
+
+      if(rec.url && !rec.dur){
+        try {
+          var d = await getDuration(rec.url);
+          if(d && !isNaN(d)){
+            rec.dur = d;
+            didChange = true;
+          }
+        } catch(e){}
+      }
+
+      // After ID3 has been read, fetch one online cover per album if embedded art is still missing.
+      // This is only triggered by the manual "Hent metadata" button, never by fast import.
+      if(!rec.artUrl && allowOnline){
+        var key = _albumKey(rec);
+        if(key){
+          var sibling = _findSiblingWithArt(key, rec.id);
+          if(sibling){ await _applyPicToTrack(rec, sibling.pic); }
+          else { await _fetchAlbumArt(rec, key); }
+        }
+      }
+
+      rec.metaStatus = (!allowOnline && !rec.artUrl) ? 'pending' : 'done';
+      rec.metadataFetched = true;
+      rec.importedFast = false;
+      rec.metaFetchedAt = Date.now();
+      await dbPut(rec);
+
+      if(rec.id === curId){
+        updatePlayerUI(rec);
+        setMediaSession(rec);
+      }
+      if(didChange) changed++;
+      } catch(e){
+        try { rec.metaStatus = 'error'; await dbPut(rec); } catch(ex){}
+      }
+
+      done++;
+      updateScanUI(done, total, 'Metadata: '+done+' / '+total);
+      if(done % 10 === 0) render();
+      await new Promise(function(r){ setTimeout(r, 0); });
+    }
+  } finally {
+    _metadataRunning = false;
+    hideScanUI();
+    render();
+  }
+
+  if(!allowOnline){
+    toast('Metadata updated offline — covers can be fetched when online');
+  } else {
+    toast('Metadata updated for '+done+(done===1?' track':' tracks'));
+  }
 }
 
 // ================================================================
@@ -1115,7 +1285,10 @@ async function _applyPicToTrack(rec, pic){
   } catch(e){ rec.artUrl = null; }
   try { await dbPut(rec); } catch(e){}
   patchArtworkInDOM(rec);
-  if(rec.id === curId) updatePlayerUI(rec);
+  if(rec.id === curId){
+    updatePlayerUI(rec);
+    setMediaSession(rec);
+  }
 }
 
 // Apply a pic object to EVERY un-arted track in the album, one render at the end.
@@ -1140,7 +1313,10 @@ async function _applyPicToAlbum(key, pic){
   updates.forEach(patchArtworkInDOM);
   if(curId){
     var cur = trackById(curId);
-    if(cur && _albumKey(cur) === key) updatePlayerUI(cur);
+    if(cur && _albumKey(cur) === key){
+      updatePlayerUI(cur);
+      setMediaSession(cur);
+    }
   }
 }
 
@@ -1467,10 +1643,8 @@ async function loadLibrary(){
     }
     render();
 
-    // Background artwork fetch for tracks loaded without embedded covers
-    if(navigator.onLine){
-      lib.forEach(function(rec){ if(!rec.artUrl) queueArtwork(rec); });
-    }
+    // Fast-import mode: never fetch artwork automatically on startup.
+    // Use Manage -> Hent metadata when covers/ID3/duration should be filled in.
   } catch(e){ render(); }
 }
 // ================================================================
@@ -1651,6 +1825,12 @@ $('mi-add-folder').addEventListener('click',function(){
 $('mi-add-files').addEventListener('click',function(){
   closeMenu();
   setTimeout(function(){ $('file-input').click(); }, 320);
+});
+
+// Manage → Hent metadata
+$('mi-fetch-meta').addEventListener('click',function(){
+  closeMenu();
+  setTimeout(fetchMissingMetadata, 320);
 });
 
 // Manage → Refresh library
