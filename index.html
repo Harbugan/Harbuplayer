@@ -788,8 +788,8 @@ async function processFiles(files){
   // --- Build records in parallel chunks --------------------------------
   // ID3 parsing is FileReader-bound (I/O), so a small concurrency window
   // keeps the device responsive while overlapping reads.
-  var CONCURRENCY = 6;
-  var BATCH       = 25;   // commit this many tracks per IDB transaction
+  var CONCURRENCY = 12;
+  var BATCH       = 50;   // commit this many tracks per IDB transaction
   var pendingRecs = [];   // records waiting to be committed in next batch
   var durationQueue = []; // {rec} entries — probed slowly after commit
 
@@ -904,51 +904,79 @@ function parseFallback(filename){
 // ================================================================
 // ID3 PARSER
 // ================================================================
-function parseID3(file){
-  return new Promise(function(res){
-    var out = {title:'',artist:'',album:'',pic:null};
-    var head = file.slice(0, Math.min(256*1024, file.size));
+// Read a Blob slice as ArrayBuffer. Promise-wrapped FileReader.
+function _readSlice(blob){
+  return new Promise(function(res,rej){
     var fr = new FileReader();
-    fr.onload = function(e){
-      try {
-        var u8 = new Uint8Array(e.target.result);
-        if(u8[0]===0x49&&u8[1]===0x44&&u8[2]===0x33){
-          var ver=u8[3];
-          var hdrSize=syncsafe(u8,6);
-          var off=10, end=off+hdrSize;
-          while(off<end-10){
-            var fid=String.fromCharCode(u8[off],u8[off+1],u8[off+2],u8[off+3]);
-            var sz=ver>=4?syncsafe(u8,off+4):(u8[off+4]<<24|u8[off+5]<<16|u8[off+6]<<8|u8[off+7]);
-            if(sz<=0||sz>500000){off+=10;continue;}
-            var data=u8.slice(off+10,off+10+sz);
-            if(fid==='TIT2'||fid==='TPE1'||fid==='TPE2'||fid==='TALB'){
-              var enc=data[0],str='';
-              if(enc===0)           str=decLatin1(data.slice(1)); // ISO-8859-1 — covers Æ Ø Å
-              else if(enc===3)      str=decUTF8(data.slice(1));   // UTF-8
-              else if(enc===1||enc===2) str=decUTF16(data.slice(1)); // UTF-16
-              if(fid==='TIT2')out.title=str.trim();
-              else if(fid==='TPE1')out.artist=str.trim();
-              else if(fid==='TPE2')out.albumArtist=str.trim();
-              else if(fid==='TALB')out.album=str.trim();
-            } else if(fid==='APIC'){
-              try{
-                var i2=1;
-                while(i2<data.length&&data[i2]!==0)i2++;
-                i2+=2;
-                while(i2<data.length&&data[i2]!==0)i2++;
-                i2++;
-                if(i2<data.length) out.pic={data:data.slice(i2),mime:'image/jpeg'};
-              }catch(ex){}
-            }
-            off+=10+sz;
-          }
-        }
-      } catch(ex){}
-      res(out);
-    };
-    fr.onerror=function(){ res(out); };
-    fr.readAsArrayBuffer(head);
+    fr.onload  = function(e){ res(e.target.result); };
+    fr.onerror = function(){ rej(fr.error); };
+    fr.readAsArrayBuffer(blob);
   });
+}
+
+// Two-stage ID3v2 reader:
+//   1) Read the 10-byte ID3 header → discover the real tag size.
+//   2) Read only that many bytes (capped at 1 MB safety).
+// Files without ID3v2 cost just 10 bytes. Files with small text-only
+// tags cost a few KB instead of the previous flat 256 KB.
+async function parseID3(file){
+  var out = {title:'',artist:'',album:'',pic:null};
+  if(file.size < 10) return out;
+
+  try {
+    // Stage 1: 10-byte header
+    var hdrBuf = await _readSlice(file.slice(0, 10));
+    var h = new Uint8Array(hdrBuf);
+    if(h[0]!==0x49 || h[1]!==0x44 || h[2]!==0x33) return out; // not "ID3"
+
+    var ver     = h[3];
+    var tagSize = syncsafe(h, 6); // size EXCLUDING the 10-byte header
+    if(tagSize <= 0) return out;
+    if(tagSize > 1024*1024) tagSize = 1024*1024; // safety cap @ 1 MB
+
+    // Stage 2: read exactly the tag body
+    var bodyEnd = Math.min(10 + tagSize, file.size);
+    var bodyBuf = await _readSlice(file.slice(10, bodyEnd));
+    var u8 = new Uint8Array(bodyBuf);
+
+    var off = 0, end = u8.length;
+    while(off < end - 10){
+      var fid = String.fromCharCode(u8[off], u8[off+1], u8[off+2], u8[off+3]);
+      var sz  = ver >= 4
+        ? syncsafe(u8, off+4)
+        : ((u8[off+4]<<24) | (u8[off+5]<<16) | (u8[off+6]<<8) | u8[off+7]);
+      if(sz <= 0 || sz > 500000){ off += 10; continue; }
+      if(off + 10 + sz > end) break;
+
+      // Use subarray (view, no copy) instead of slice (copy) for hot path.
+      // Only APIC needs an owned copy because we hand the bytes to a Blob.
+      if(fid==='TIT2' || fid==='TPE1' || fid==='TALB'){
+        var data = u8.subarray(off+10, off+10+sz);
+        var enc  = data[0], str = '';
+        if(enc===0)             str = decLatin1(data.subarray(1));
+        else if(enc===3)        str = decUTF8(data.subarray(1));
+        else if(enc===1||enc===2) str = decUTF16(data.subarray(1));
+        if(fid==='TIT2')      out.title  = str.trim();
+        else if(fid==='TPE1') out.artist = str.trim();
+        else if(fid==='TALB') out.album  = str.trim();
+      } else if(fid === 'APIC'){
+        try {
+          var d2 = u8.subarray(off+10, off+10+sz);
+          var i2 = 1;
+          while(i2 < d2.length && d2[i2] !== 0) i2++;
+          i2 += 2;
+          while(i2 < d2.length && d2[i2] !== 0) i2++;
+          i2++;
+          if(i2 < d2.length){
+            // Copy here — caller stores these bytes long-term in IDB.
+            out.pic = { data: d2.slice(i2), mime: 'image/jpeg' };
+          }
+        } catch(ex){}
+      }
+      off += 10 + sz;
+    }
+  } catch(e){}
+  return out;
 }
 function syncsafe(u8,off){
   return((u8[off]&0x7f)<<21)|((u8[off+1]&0x7f)<<14)|((u8[off+2]&0x7f)<<7)|(u8[off+3]&0x7f);
