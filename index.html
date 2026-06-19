@@ -719,14 +719,20 @@ function isAudio(name){
 }
 
 async function gatherFilesFromDir(dirHandle, acc){
+  var entries = [];
   for await(var entry of dirHandle.values()){
+    entries.push(entry);
+  }
+  await Promise.all(entries.map(async function(entry){
     if(entry.kind === 'file'){
-      var f = await entry.getFile();
-      if(isAudio(f.name)) acc.push(f);
+      try {
+        var f = await entry.getFile();
+        if(isAudio(f.name)) acc.push(f);
+      } catch(e){}
     } else if(entry.kind === 'directory'){
       try { await gatherFilesFromDir(entry, acc); } catch(e){}
     }
-  }
+  }));
   return acc;
 }
 
