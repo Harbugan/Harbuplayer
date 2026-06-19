@@ -792,7 +792,7 @@ async function processFiles(files){
   // Process in parallel batches. On real Android flash storage,
   // small batches keep I/O saturated without overwhelming memory.
   // 4 concurrent reads is the sweet spot for mid-range Android hardware.
-  var BATCH = 4;
+  var BATCH = 2;
 
   async function processOne(f){
     var tags = await parseID3(f);
