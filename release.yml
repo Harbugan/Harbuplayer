@@ -12,6 +12,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Inject version tag into index.html and sw.js
         run: |
@@ -19,10 +22,18 @@ jobs:
           sed -i "s/var APP_VERSION = '[^']*'/var APP_VERSION = '${TAG}'/" index.html
           sed -i "s/var CACHE = '[^']*'/var CACHE = 'harbuplayer-${TAG}'/" sw.js
 
-      - name: Commit updated index.html
+      - name: Commit updated files
         run: |
+          TAG="${{ github.event.release.tag_name }}"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "chore: set version to ${TAG}"
+          # Stage BOTH files — the service-worker cache name must be bumped too,
+          # otherwise clients keep serving the old cached shell after a release.
+          git add index.html sw.js
+          # Skip cleanly if nothing changed (avoids a failed job on re-runs).
+          if git diff --cached --quiet; then
+            echo "No version changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: set version to ${TAG} [skip ci]"
           git push origin HEAD:main
