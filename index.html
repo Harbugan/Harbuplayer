@@ -104,13 +104,11 @@ body{display:flex;flex-direction:column}
   color:var(--mu);cursor:pointer;padding:4px;display:none;
   width:30px;height:30px;align-items:center;justify-content:center}
 #search-clear.vis{display:flex}
-#chips{display:flex;gap:8px;padding:10px 14px;overflow-x:auto;flex-shrink:0;
-  scrollbar-width:none;-ms-overflow-style:none}
-#chips::-webkit-scrollbar{display:none}
+#chips{display:flex;gap:6px;padding:10px 14px;flex-shrink:0}
 .chip{background:var(--surf);border:1.5px solid var(--bd);color:var(--mu);
-  border-radius:20px;padding:6px 14px;font-size:13px;font-weight:500;
-  cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;
-  flex-shrink:0;-webkit-appearance:none;appearance:none}
+  border-radius:20px;padding:6px 8px;font-size:13px;font-weight:500;
+  cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:4px;
+  flex:1;-webkit-appearance:none;appearance:none}
 .chip.on{background:var(--o);border-color:var(--o);color:#fff}
 #list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .state{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -850,7 +848,7 @@ function parseFallback(filename){
 function parseID3(file){
   return new Promise(function(res){
     var out = {title:'',artist:'',album:'',pic:null};
-    var head = file.slice(0, Math.min(64*1024, file.size));
+    var head = file.slice(0, Math.min(128*1024, file.size));
     var fr = new FileReader();
     fr.onload = function(e){
       try {
