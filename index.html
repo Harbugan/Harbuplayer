@@ -1841,9 +1841,9 @@ $('mini').addEventListener('click',function(e){
     pl.style.transform = '';
     if(curY - startY > 80) showLibrary();
   }
-  $('pl-drag-handle').addEventListener('touchstart', onStart, {passive:true});
-  document.addEventListener('touchmove',  function(e){ if(isDragging){ onMove(e); } }, {passive:true});
-  document.addEventListener('touchend',   onEnd);
+$('pl-drag-handle').addEventListener('touchstart', onStart, {passive:true});
+  $('pl-drag-handle').addEventListener('touchmove',  onMove,  {passive:true});
+  $('pl-drag-handle').addEventListener('touchend',   onEnd);
   // Also allow clicking the handle to minimize
   $('pl-drag-handle').addEventListener('click', function(){ showLibrary(); });
 })();
