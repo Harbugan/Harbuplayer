@@ -597,6 +597,7 @@ var openGroups = {};   // key: groupName → true when expanded
 var theme = 'orange';
 var THEMES = ['orange','magenta','teal','grey','skeleton'];
 var _artSwiping = false; // true while a swipe-triggered art animation is in flight
+  var _nextShufflePos = -1; // pre-picked queue position for shuffle mode
   
 // ================================================================
 // UTILS
@@ -916,7 +917,16 @@ function play(id){
   if(qpos===-1){ queue=lib.map(function(x){return x.id;}); qpos=queue.indexOf(id); }
   _startPlayback(id, t);
 }
-
+// Pre-pick the next shuffle position so "Up next" can show something accurate.
+// Avoids repeating the current track unless the queue has only one entry.
+function _pickNextShuffle(){
+  if(!queue.length){ _nextShufflePos=-1; return; }
+  if(queue.length===1){ _nextShufflePos=0; return; }
+  var pick;
+  do { pick=Math.floor(Math.random()*queue.length); } while(pick===qpos);
+  _nextShufflePos=pick;
+}
+  
 // playFromGroup() — builds queue from the specific album/artist group
 function playFromGroup(id, groupTracks){
   var t=trackById(id); if(!t) return;
@@ -946,6 +956,7 @@ function _startPlayback(id, t){
       }
     });
   }
+if(shuffle) _pickNextShuffle();
   updatePlayerUI(t);
   if(!setPlayingRow(id)) render();
   saveMeta();
@@ -958,7 +969,7 @@ function togglePlay(){
 
 function nextTrack(){
   if(!queue.length) return;
-  if(shuffle) qpos=Math.floor(Math.random()*queue.length);
+  if(shuffle) qpos=(_nextShufflePos>=0)?_nextShufflePos:Math.floor(Math.random()*queue.length);
   else qpos=(qpos+1)%queue.length;
   var id=queue[qpos];
   var t=trackById(id); if(!t) return;
@@ -1009,7 +1020,8 @@ var _ht=$('pl-hdr-title'), _hs=$('pl-hdr-sub');
 // Returns the next track in the queue, or null when the result is unpredictable
 // (shuffle) or redundant (repeat — same track plays again).
 function getUpNextTrack(){
-  if(!queue.length || qpos < 0 || shuffle || repeat) return null;
+  if(!queue.length || qpos < 0 || repeat) return null;
+  if(shuffle) return _nextShufflePos>=0 ? trackById(queue[_nextShufflePos]) : null;
   return trackById(queue[(qpos + 1) % queue.length]);
 }
 
@@ -1892,7 +1904,11 @@ $('b-play').addEventListener('click',togglePlay);
 $('b-next').addEventListener('click',nextTrack);
 $('b-prev').addEventListener('click',prevTrack);
 $('b-shuf').addEventListener('click',function(){
-  shuffle=!shuffle; this.classList.toggle('on',shuffle); saveMeta(); updateUpNext();
+  shuffle=!shuffle;
+  this.classList.toggle('on',shuffle);
+  saveMeta();
+  if(shuffle) _pickNextShuffle(); else _nextShufflePos=-1;
+  updateUpNext();
 });
 $('b-rep').addEventListener('click',function(){
   repeat=!repeat; this.classList.toggle('on',repeat); saveMeta(); updateUpNext();
