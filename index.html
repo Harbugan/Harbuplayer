@@ -175,13 +175,18 @@ body{display:flex;flex-direction:column}
   justify-content:center;padding:24px 20px;gap:20px;overflow:hidden}
 #pl-art{width:min(260px,70vw);aspect-ratio:1;border-radius:18px;
   background:var(--ol);display:flex;align-items:center;justify-content:center;
-  overflow:hidden;color:var(--o);
-  box-shadow:0 8px 40px rgba(0,0,0,.18);transition:transform .2s}
-#pl-art.playing{animation:artPulse 2.6s ease-in-out infinite}
+  overflow:hidden;color:var(--o);will-change:transform;
+  box-shadow:0 8px 40px rgba(0,0,0,.18);transition:transform .2s,box-shadow .3s}
+/* Compositor-only pulse: transform (no per-frame paint), plus a static
+   accent glow while playing. Animating box-shadow blur was repainting a
+   large blurred area every frame — heavy on the Adreno 540 / Snapdragon 835. */
+#pl-art.playing{
+  box-shadow:0 8px 40px rgba(0,0,0,.18), 0 0 30px 2px color-mix(in srgb, var(--o) 26%, transparent);
+  animation:artPulse 3s ease-in-out infinite}
 #pl-art img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;pointer-events:none}
-@keyframes artPulse{
-  0%,100%{box-shadow:0 8px 40px rgba(0,0,0,.18), 0 0 20px 0 color-mix(in srgb, var(--o) 12%, transparent)}
-  50%    {box-shadow:0 8px 40px rgba(0,0,0,.18), 0 0 36px 4px color-mix(in srgb, var(--o) 32%, transparent)}
+@keyframes artPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
+@media(prefers-reduced-motion:reduce){
+  #pl-art.playing{animation:none}
 }
 #pl-info{text-align:center;width:100%}
 #pl-title{font-size:18px;font-weight:700;line-height:1.2}
@@ -953,7 +958,7 @@ function _startPlayback(id, t){
     });
   }
   updatePlayerUI(t);
-  render();
+  if(!setPlayingRow(id)) render();
   saveMeta();
 }
 
@@ -993,8 +998,7 @@ function updatePlayerUI(t){
   var art=$('pl-art');
   // Use <img> with object-fit:cover — more reliable than background-image for JPEG data
   if(hasArt){
-    art.innerHTML='<img src="'+t.artUrl+'" alt="'+esc(t.album||'')+'" '
-      +'style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;">';
+    art.innerHTML='<img src="'+t.artUrl+'" alt="'+esc(t.album||'')+'">';
   } else {
     art.innerHTML=svgVinyl(80);
   }
@@ -1280,7 +1284,9 @@ async function _doFetchArt(rec){
     var data = await apiResp.json();
     if(!data.results || !data.results.length) return null;
 
-    var artUrl = (data.results[0].artworkUrl100 || '').replace('100x100bb','1000x1000bb');
+    // 600px is ample for a 260px-max display at ~319ppi; 1000px wasted
+    // both IndexedDB storage and resident RAM (bytes are held in lib[].pic).
+    var artUrl = (data.results[0].artworkUrl100 || '').replace('100x100bb','600x600bb');
     if(!artUrl) return null;
 
     var imgResp = await fetch(artUrl);
@@ -1378,7 +1384,33 @@ var artistLabel = view==='albums' ? '<span class="grp-artist">'+esc(getDisplayAr
   }
   list.innerHTML=html;
   var playing=list.querySelector('[data-id="'+curId+'"]');
-  if(playing) playing.scrollIntoView({block:'nearest',behavior:'smooth'});
+  if(playing) playing.scrollIntoView({block:'nearest'});
+}
+
+// Cheap update of the "now playing" highlight without rebuilding the whole list.
+// Returns false (so the caller can fall back to a full render) when the target
+// row isn't currently in the DOM — e.g. it lives inside a collapsed group.
+function _grpSel(name){ return (name||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
+function setPlayingRow(id){
+  var list=$('list');
+  var prevRow=list.querySelector('.row.play');
+  if(prevRow) prevRow.classList.remove('play');
+  var prevHdr=list.querySelector('.grp-hdr.active');
+  if(prevHdr) prevHdr.classList.remove('active');
+
+  if(view==='albums'||view==='artists'){
+    var t=trackById(id);
+    if(t){
+      var g=view==='albums'?t.album:t.artist;
+      var hdr=list.querySelector('.grp-hdr[data-grp="'+_grpSel(g)+'"]');
+      if(hdr) hdr.classList.add('active');
+    }
+  }
+  var row=list.querySelector('.row[data-id="'+id+'"]');
+  if(!row) return false;
+  row.classList.add('play');
+  row.scrollIntoView({block:'nearest'});
+  return true;
 }
 
 // ================================================================
@@ -1521,16 +1553,19 @@ function showLibrary(){
 audio.addEventListener('timeupdate',function(){
   if(!audio.duration) return;
   var pct=(audio.currentTime/audio.duration)*100;
+  // Update the lock-screen / notification scrubber even when backgrounded.
+  if('mediaSession' in navigator){
+    try{navigator.mediaSession.setPositionState(
+      {duration:audio.duration,playbackRate:1,position:audio.currentTime});}catch(e){}
+  }
+  // The on-screen progress bars aren't visible while hidden — skip the writes.
+  if(document.hidden) return;
   var pf=pct.toFixed(1)+'%';
   $('pl-fill').style.width=pf;
   $('pl-thumb').style.left=pf;
   $('mini-prog').style.width=pf;
   $('pl-cur').textContent=fmt(audio.currentTime);
   $('pl-dur').textContent=fmt(audio.duration);
-  if('mediaSession' in navigator && audio.duration){
-    try{navigator.mediaSession.setPositionState(
-      {duration:audio.duration,playbackRate:1,position:audio.currentTime});}catch(e){}
-  }
 });
 audio.addEventListener('ended',function(){
   _stopSaveInterval();
@@ -1554,7 +1589,11 @@ audio.addEventListener('pause',function(){
   _stopSaveInterval();
   if(!_transitioning) savePlaybackState();  // skip the src-swap pause, save real pauses only
 });
-audio.addEventListener('error',function(){ toast('Playlist is empty'); });
+audio.addEventListener('error',function(){
+  // Ignore the benign error fired when src is cleared (e.g. on library clear).
+  if(!audio.src || !curId) return;
+  toast('Couldn\u2019t play this track');
+});
   // Lazy duration — fills in the first time a track is actually played,
 // instead of probing every track at ingest time.
 audio.addEventListener('loadedmetadata',function(){
