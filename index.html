@@ -161,16 +161,14 @@ body{display:flex;flex-direction:column}
 #mini-pp{background:none;border:none;cursor:pointer;color:var(--tx);
   width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #player{z-index:20}
-#pl-hdr{background:var(--o);padding:14px 14px;
-  padding-top:calc(14px + var(--safe-top));
-  display:flex;align-items:center;gap:10px}
-#pl-back{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);
-  color:#fff;border-radius:10px;width:40px;height:40px;
+#pl-drag-handle{
+  padding-top:calc(10px + var(--safe-top));
+  padding-bottom:6px;
   display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;-webkit-appearance:none;appearance:none}
-#pl-hdr-meta{flex:1;min-width:0;color:#fff}
-#pl-hdr-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#pl-hdr-sub{font-size:12px;opacity:.85;margin-top:2px}
+  cursor:pointer;flex-shrink:0}
+#pl-drag-pill{
+  width:36px;height:4px;border-radius:2px;
+  background:var(--bd)}
 #pl-body{flex:1;display:flex;flex-direction:column;align-items:center;
   justify-content:center;padding:24px 20px;gap:20px;overflow:hidden}
 #pl-art{width:min(260px,70vw);aspect-ratio:1;border-radius:18px;
@@ -376,15 +374,9 @@ body{display:flex;flex-direction:column}
     <div class="scroll-anchor"></div>
   </div>
 
-  <div class="screen off" id="player">
-    <div id="pl-hdr">
-      <button id="pl-back">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <div id="pl-hdr-meta">
-        <div id="pl-hdr-title">HarbuPlayer</div>
-        <div id="pl-hdr-sub">Now Playing</div>
-      </div>
+<div class="screen off" id="player">
+    <div id="pl-drag-handle">
+      <div id="pl-drag-pill"></div>
     </div>
     <div id="pl-body">
       <div id="pl-art">
@@ -993,8 +985,6 @@ function updatePlayerUI(t){
   var hasArt = !!(t&&t.artUrl);
   $('pl-title').textContent   = t ? t.name   : 'No track selected';
   $('pl-artist').textContent  = t ? t.artist+(t.album&&t.album!=='Unknown album'?' \u00b7 '+t.album:'') : '';
-  $('pl-hdr-title').textContent = t ? t.name   : 'HarbuPlayer';
-  $('pl-hdr-sub').textContent   = t ? t.artist : '';
   var art=$('pl-art');
   // Use <img> with object-fit:cover — more reliable than background-image for JPEG data
   if(hasArt){
@@ -1849,7 +1839,32 @@ $('mini').addEventListener('click',function(e){
   showPlayer();
 });
 
-$('pl-back').addEventListener('click',showLibrary);
+// Swipe down on player to minimize
+(function(){
+  var pl=$('player'), startY=0, curY=0, isDragging=false;
+  function onStart(e){
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    curY = startY; isDragging = true;
+    pl.style.transition = 'none';
+  }
+  function onMove(e){
+    if(!isDragging) return;
+    curY = e.touches ? e.touches[0].clientY : e.clientY;
+    var dy = Math.max(0, curY - startY);
+    pl.style.transform = 'translateY('+dy+'px)';
+  }
+  function onEnd(){
+    if(!isDragging) return; isDragging = false;
+    pl.style.transition = '';
+    pl.style.transform = '';
+    if(curY - startY > 80) showLibrary();
+  }
+  $('pl-drag-handle').addEventListener('touchstart', onStart, {passive:true});
+  document.addEventListener('touchmove',  function(e){ if(isDragging){ onMove(e); } }, {passive:true});
+  document.addEventListener('touchend',   onEnd);
+  // Also allow clicking the handle to minimize
+  $('pl-drag-handle').addEventListener('click', function(){ showLibrary(); });
+})();
 $('b-play').addEventListener('click',togglePlay);
 $('b-next').addEventListener('click',nextTrack);
 $('b-prev').addEventListener('click',prevTrack);
