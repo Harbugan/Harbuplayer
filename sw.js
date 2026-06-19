@@ -37,10 +37,13 @@ self.addEventListener('fetch', function(e) {
 
   e.respondWith(
     caches.match(e.request).then(function(cached) {
-      // Network-first for navigation (always get latest app version),
-      // then fall back to cache if offline.
+      // Stale-while-revalidate: serve cache instantly (fast startup on mobile),
+      // and refresh the cached copy from the network in the background so the
+      // next launch is up to date. The in-app "Update" button forces a hard
+      // refresh when the user wants the newest release immediately.
       var network = fetch(e.request).then(function(response) {
-        if (response.ok) {
+        // Only cache successful, same-origin responses — skip opaque/partial.
+        if (response && response.ok && response.type === 'basic') {
           var clone = response.clone();
           caches.open(CACHE).then(function(cache) {
             cache.put(e.request, clone);
