@@ -850,7 +850,7 @@ function parseFallback(filename){
 function parseID3(file){
   return new Promise(function(res){
     var out = {title:'',artist:'',album:'',pic:null};
-    var head = file.slice(0, Math.min(256*1024, file.size));
+    var head = file.slice(0, Math.min(64*1024, file.size));
     var fr = new FileReader();
     fr.onload = function(e){
       try {
