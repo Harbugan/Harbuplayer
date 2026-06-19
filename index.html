@@ -719,20 +719,14 @@ function isAudio(name){
 }
 
 async function gatherFilesFromDir(dirHandle, acc){
-  var entries = [];
   for await(var entry of dirHandle.values()){
-    entries.push(entry);
-  }
-  await Promise.all(entries.map(async function(entry){
     if(entry.kind === 'file'){
-      try {
-        var f = await entry.getFile();
-        if(isAudio(f.name)) acc.push(f);
-      } catch(e){}
+      var f = await entry.getFile();
+      if(isAudio(f.name)) acc.push(f);
     } else if(entry.kind === 'directory'){
       try { await gatherFilesFromDir(entry, acc); } catch(e){}
     }
-  }));
+  }
   return acc;
 }
 
@@ -789,86 +783,45 @@ async function processFiles(files){
   var done = 0;
   showScanUI(0, total, 'Reading: 0 / '+total);
 
-  // Process in parallel batches. On real Android flash storage,
-  // small batches keep I/O saturated without overwhelming memory.
-  // 4 concurrent reads is the sweet spot for mid-range Android hardware.
-  var BATCH = 2;
+  for(var i=0; i<fresh.length; i++){
+    var f = fresh[i];
+    try {
+      var tags = await parseID3(f);
+      var fb = parseFallback(f.name);
 
-  async function processOne(f){
-    var tags = await parseID3(f);
-    var fb = parseFallback(f.name);
-    var rec = {
-      name:   (tags.title  || fb.title).trim()  || fb.title,
-      artist: (tags.artist || fb.artist).trim() || fb.artist,
-      album:  (tags.album  || 'Unknown album').trim(),
-      fav: false, dur: null,
-      fname: f.name, fsize: f.size,
-      blob: f,
-      pic: tags.pic || null
-    };
-    var id = await dbAdd(rec);
-    rec.id = id;
-    rec.url = URL.createObjectURL(f);
-    // Defer artUrl blob creation — done in bulk after loop to avoid
-    // hammering the memory allocator during the hot I/O path
-    rec.artUrl = null;
-    return rec;
-  }
+      var rec = {
+        name:   (tags.title  || fb.title).trim()  || fb.title,
+        artist: (tags.artist || fb.artist).trim() || fb.artist,
+        album:  (tags.album  || 'Unknown album').trim(),
+        fav: false, dur: null,
+        fname: f.name, fsize: f.size,
+        blob: f,
+        pic: tags.pic || null
+      };
 
-  var newRecs = [];
+      var id = await dbAdd(rec);
+      rec.id = id;
+      rec.url = URL.createObjectURL(f);
+      rec.artUrl = rec.pic
+        ? URL.createObjectURL(new Blob([rec.pic.data], {type: rec.pic.mime||'image/jpeg'}))
+        : null;
 
-  for(var i = 0; i < fresh.length; i += BATCH){
-    var batch = fresh.slice(i, i + BATCH);
-    var results = await Promise.allSettled(batch.map(processOne));
-
-    results.forEach(function(r){
-      if(r.status === 'fulfilled'){
-        newRecs.push(r.value);
-        lib.push(r.value);
-      }
+      lib.push(rec);
       done++;
-    });
+      updateScanUI(done, total);
+      if(done % 8 === 0) render();
 
-    updateScanUI(done, total);
-
-    // Render every 3 batches (12 tracks) to keep UI responsive
-    // without triggering a DOM rebuild on every single batch
-    if(Math.floor(i / BATCH) % 3 === 0) render();
-
-    // Yield to the browser between batches so the UI thread can breathe
-    // and Android doesn't thermal-throttle us mid-import
-    await new Promise(function(r){ setTimeout(r, 0); });
-  }
-
-  // Now create artwork blob URLs in one pass — memory allocator is no
-  // longer competing with file I/O
-  newRecs.forEach(function(rec){
-    if(rec.pic){
-      try {
-        rec.artUrl = URL.createObjectURL(
-          new Blob([rec.pic.data], {type: rec.pic.mime||'image/jpeg'})
-        );
-      } catch(e){ rec.artUrl = null; }
+      // Queue background artwork fetch if no embedded cover was found
+      if(!rec.artUrl) queueArtwork(rec);
+    } catch(e){
+      done++;
     }
-  });
+  }
 
   hideScanUI();
   render();
-  toast('Added '+ newRecs.length +(newRecs.length===1?' track':' tracks'));
+  toast('Added '+done+(done===1?' track':' tracks'));
   saveMeta();
-
-  // Kick off duration reads and artwork fetches after the UI is unblocked.
-  // Both are low-priority background work that must not slow the import.
-  setTimeout(function(){
-    newRecs.forEach(function(rec){
-      getDuration(rec.url)
-        .then(function(d){ rec.dur = d; })
-        .catch(function(){});
-      if(!rec.artUrl) queueArtwork(rec);
-    });
-    // Single render after all durations are likely settled (3s grace)
-    setTimeout(render, 3000);
-  }, 500);
 }
 
 function getDuration(url){
