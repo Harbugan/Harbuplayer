@@ -204,12 +204,6 @@ body{display:flex;flex-direction:column}
 .pb.lg:active{background:var(--od)}
 .pb.dim{color:var(--mu)}
 .pb.on{color:var(--o)}
-#pl-vol{display:flex;align-items:center;gap:10px;width:100%}
-#pl-vol .pb{width:36px;height:36px;color:var(--mu)}
-#pl-vol input{flex:1;height:4px;-webkit-appearance:none;appearance:none;
-  background:var(--trk);border-radius:2px;outline:none;cursor:pointer}
-#pl-vol input::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
-  border-radius:50%;background:var(--o);cursor:pointer}
 #scan-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
   z-index:100;align-items:center;justify-content:center}
 #scan-overlay.vis{display:flex}
@@ -411,15 +405,6 @@ body{display:flex;flex-direction:column}
         </button>
         <button class="pb dim" id="b-rep" title="Gentag">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-        </button>
-      </div>
-      <div id="pl-vol">
-        <button class="pb">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
-        </button>
-        <input id="vol-slider" type="range" min="0" max="100" value="80">
-        <button class="pb">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
         </button>
       </div>
     </div>
@@ -1412,7 +1397,6 @@ function saveMeta(){
     dbMeta('curId',curId);
     dbMeta('view',view);
     dbMeta('sort',sort);
-    dbMeta('vol',$('vol-slider').value);
     dbMeta('shuffle',shuffle);
     dbMeta('repeat',repeat);
     dbMeta('theme',theme);
@@ -1430,7 +1414,6 @@ function savePlaybackState(){
     dbMeta('qpos', qpos);
     dbMeta('shuffle', shuffle);
     dbMeta('repeat', repeat);
-    dbMeta('vol', $('vol-slider').value);
   } catch(e){}
 }
 
@@ -1466,7 +1449,6 @@ async function loadLibrary(){
     var sv=await dbMeta('view');       if(sv)    view=sv;
     var so=await dbMeta('sort');       if(so)    sort=so;
     var th=await dbMeta('theme');      applyTheme(th||'orange');
-    var vol=await dbMeta('vol');       if(vol)   $('vol-slider').value=vol;
     var sh=await dbMeta('shuffle');    if(sh!=null) shuffle=!!sh;
     var rp=await dbMeta('repeat');     if(rp!=null) repeat=!!rp;
     var ci=await dbMeta('curId');
@@ -1874,8 +1856,8 @@ $('b-shuf').addEventListener('click',function(){
 $('b-rep').addEventListener('click',function(){
   repeat=!repeat; this.classList.toggle('on',repeat); saveMeta();
 });
-$('vol-slider').addEventListener('input',function(){
-  audio.volume=this.value/100; saveMeta();
+audio.volume = 1.0;
+audio.volume=this.value/100; saveMeta();
 });
 
 // ================================================================
