@@ -785,19 +785,13 @@ async function processFiles(files){
   var done = 0;
   showScanUI(0, total, 'Reading: 0 / '+total);
 
-  // --- Build records in parallel chunks --------------------------------
-  // ID3 parsing is FileReader-bound (I/O), so a small concurrency window
-  // keeps the device responsive while overlapping reads.
-  var CONCURRENCY = 12;
-  var BATCH       = 50;   // commit this many tracks per IDB transaction
-  var pendingRecs = [];   // records waiting to be committed in next batch
-  var durationQueue = []; // {rec} entries — probed slowly after commit
-
-  async function buildOne(f){
+  for(var i=0; i<fresh.length; i++){
+    var f = fresh[i];
     try {
       var tags = await parseID3(f);
-      var fb   = parseFallback(f.name);
-      return {
+      var fb = parseFallback(f.name);
+
+      var rec = {
         name:   (tags.title  || fb.title).trim()  || fb.title,
         artist: (tags.artist || fb.artist).trim() || fb.artist,
         album:  (tags.album  || 'Unknown album').trim(),
@@ -806,53 +800,23 @@ async function processFiles(files){
         blob: f,
         pic: tags.pic || null
       };
-    } catch(e){ return null; }
-  }
 
-  // Commit a batch of records in ONE IndexedDB transaction.
-  // Much faster than one transaction per track.
-  function commitBatch(recs){
-    return new Promise(function(resolve){
-      if(!recs.length){ resolve(); return; }
-      var tx    = db.transaction('tracks','readwrite');
-      var store = tx.objectStore('tracks');
-      recs.forEach(function(rec){
-        var req = store.add(rec);
-        req.onsuccess = function(){
-          rec.id = req.result;
-          rec.url = URL.createObjectURL(rec.blob);
-          rec.artUrl = rec.pic
-            ? URL.createObjectURL(new Blob([rec.pic.data], {type: rec.pic.mime||'image/jpeg'}))
-            : null;
-          lib.push(rec);
-          durationQueue.push(rec);
-          if(!rec.artUrl) queueArtwork(rec);
-        };
-      });
-      tx.oncomplete = function(){ resolve(); };
-      tx.onerror    = function(){ resolve(); }; // best-effort
-      tx.onabort    = function(){ resolve(); };
-    });
-  }
+      var id = await dbAdd(rec);
+      rec.id = id;
+      rec.url = URL.createObjectURL(f);
+      rec.artUrl = rec.pic
+        ? URL.createObjectURL(new Blob([rec.pic.data], {type: rec.pic.mime||'image/jpeg'}))
+        : null;
 
-  // Process the fresh list in sliding chunks of CONCURRENCY parallel
-  // ID3 reads. As records resolve, queue them; flush on BATCH or end.
-  var idx = 0;
-  while(idx < fresh.length){
-    var slice = fresh.slice(idx, idx + CONCURRENCY);
-    idx += CONCURRENCY;
-    var recs = await Promise.all(slice.map(buildOne));
-    for(var k=0;k<recs.length;k++){
-      if(recs[k]) pendingRecs.push(recs[k]);
+      lib.push(rec);
       done++;
-    }
-    updateScanUI(done, total);
+      updateScanUI(done, total);
+      if(done % 8 === 0) render();
 
-    if(pendingRecs.length >= BATCH || idx >= fresh.length){
-      var toCommit = pendingRecs;
-      pendingRecs = [];
-      await commitBatch(toCommit);
-      render(); // first visible tracks appear after the first batch
+      // Queue background artwork fetch if no embedded cover was found
+      if(!rec.artUrl) queueArtwork(rec);
+    } catch(e){
+      done++;
     }
   }
 
@@ -860,27 +824,6 @@ async function processFiles(files){
   render();
   toast('Added '+done+(done===1?' track':' tracks'));
   saveMeta();
-
-  // --- Duration probing AFTER commit ---------------------------------
-  // Probing 100+ <audio> elements at once stalls the device. Run them
-  // serially in the background, low priority, no awaits blocking the
-  // caller. Each successful probe persists via dbPut and triggers one
-  // render so the UI fills in durations progressively.
-  (async function probeDurations(){
-    for(var i=0;i<durationQueue.length;i++){
-      var r = durationQueue[i];
-      try {
-        var d = await getDuration(r.url);
-        if(d && !isNaN(d)){
-          r.dur = d;
-          try { dbPut(r); } catch(e){}
-          // Re-render at most every ~10 probes to avoid layout thrash
-          if(i % 10 === 0) render();
-        }
-      } catch(e){}
-    }
-    render();
-  })();
 }
 
 function getDuration(url){
@@ -904,79 +847,50 @@ function parseFallback(filename){
 // ================================================================
 // ID3 PARSER
 // ================================================================
-// Read a Blob slice as ArrayBuffer. Promise-wrapped FileReader.
-function _readSlice(blob){
-  return new Promise(function(res,rej){
+function parseID3(file){
+  return new Promise(function(res){
+    var out = {title:'',artist:'',album:'',pic:null};
+    var head = file.slice(0, Math.min(256*1024, file.size));
     var fr = new FileReader();
-    fr.onload  = function(e){ res(e.target.result); };
-    fr.onerror = function(){ rej(fr.error); };
-    fr.readAsArrayBuffer(blob);
-  });
-}
-
-// Two-stage ID3v2 reader:
-//   1) Read the 10-byte ID3 header → discover the real tag size.
-//   2) Read only that many bytes (capped at 1 MB safety).
-// Files without ID3v2 cost just 10 bytes. Files with small text-only
-// tags cost a few KB instead of the previous flat 256 KB.
-async function parseID3(file){
-  var out = {title:'',artist:'',album:'',pic:null};
-  if(file.size < 10) return out;
-
-  try {
-    // Stage 1: 10-byte header
-    var hdrBuf = await _readSlice(file.slice(0, 10));
-    var h = new Uint8Array(hdrBuf);
-    if(h[0]!==0x49 || h[1]!==0x44 || h[2]!==0x33) return out; // not "ID3"
-
-    var ver     = h[3];
-    var tagSize = syncsafe(h, 6); // size EXCLUDING the 10-byte header
-    if(tagSize <= 0) return out;
-    if(tagSize > 1024*1024) tagSize = 1024*1024; // safety cap @ 1 MB
-
-    // Stage 2: read exactly the tag body
-    var bodyEnd = Math.min(10 + tagSize, file.size);
-    var bodyBuf = await _readSlice(file.slice(10, bodyEnd));
-    var u8 = new Uint8Array(bodyBuf);
-
-    var off = 0, end = u8.length;
-    while(off < end - 10){
-      var fid = String.fromCharCode(u8[off], u8[off+1], u8[off+2], u8[off+3]);
-      var sz  = ver >= 4
-        ? syncsafe(u8, off+4)
-        : ((u8[off+4]<<24) | (u8[off+5]<<16) | (u8[off+6]<<8) | u8[off+7]);
-      if(sz <= 0 || sz > 500000){ off += 10; continue; }
-      if(off + 10 + sz > end) break;
-
-      // Use subarray (view, no copy) instead of slice (copy) for hot path.
-      // Only APIC needs an owned copy because we hand the bytes to a Blob.
-      if(fid==='TIT2' || fid==='TPE1' || fid==='TALB'){
-        var data = u8.subarray(off+10, off+10+sz);
-        var enc  = data[0], str = '';
-        if(enc===0)             str = decLatin1(data.subarray(1));
-        else if(enc===3)        str = decUTF8(data.subarray(1));
-        else if(enc===1||enc===2) str = decUTF16(data.subarray(1));
-        if(fid==='TIT2')      out.title  = str.trim();
-        else if(fid==='TPE1') out.artist = str.trim();
-        else if(fid==='TALB') out.album  = str.trim();
-      } else if(fid === 'APIC'){
-        try {
-          var d2 = u8.subarray(off+10, off+10+sz);
-          var i2 = 1;
-          while(i2 < d2.length && d2[i2] !== 0) i2++;
-          i2 += 2;
-          while(i2 < d2.length && d2[i2] !== 0) i2++;
-          i2++;
-          if(i2 < d2.length){
-            // Copy here — caller stores these bytes long-term in IDB.
-            out.pic = { data: d2.slice(i2), mime: 'image/jpeg' };
+    fr.onload = function(e){
+      try {
+        var u8 = new Uint8Array(e.target.result);
+        if(u8[0]===0x49&&u8[1]===0x44&&u8[2]===0x33){
+          var ver=u8[3];
+          var hdrSize=syncsafe(u8,6);
+          var off=10, end=off+hdrSize;
+          while(off<end-10){
+            var fid=String.fromCharCode(u8[off],u8[off+1],u8[off+2],u8[off+3]);
+            var sz=ver>=4?syncsafe(u8,off+4):(u8[off+4]<<24|u8[off+5]<<16|u8[off+6]<<8|u8[off+7]);
+            if(sz<=0||sz>500000){off+=10;continue;}
+            var data=u8.slice(off+10,off+10+sz);
+            if(fid==='TIT2'||fid==='TPE1'||fid==='TALB'){
+              var enc=data[0],str='';
+              if(enc===0)           str=decLatin1(data.slice(1)); // ISO-8859-1 — covers Æ Ø Å
+              else if(enc===3)      str=decUTF8(data.slice(1));   // UTF-8
+              else if(enc===1||enc===2) str=decUTF16(data.slice(1)); // UTF-16
+              if(fid==='TIT2')out.title=str.trim();
+              else if(fid==='TPE1')out.artist=str.trim();
+              else if(fid==='TALB')out.album=str.trim();
+            } else if(fid==='APIC'){
+              try{
+                var i2=1;
+                while(i2<data.length&&data[i2]!==0)i2++;
+                i2+=2;
+                while(i2<data.length&&data[i2]!==0)i2++;
+                i2++;
+                if(i2<data.length) out.pic={data:data.slice(i2),mime:'image/jpeg'};
+              }catch(ex){}
+            }
+            off+=10+sz;
           }
-        } catch(ex){}
-      }
-      off += 10 + sz;
-    }
-  } catch(e){}
-  return out;
+        }
+      } catch(ex){}
+      res(out);
+    };
+    fr.onerror=function(){ res(out); };
+    fr.readAsArrayBuffer(head);
+  });
 }
 function syncsafe(u8,off){
   return((u8[off]&0x7f)<<21)|((u8[off+1]&0x7f)<<14)|((u8[off+2]&0x7f)<<7)|(u8[off+3]&0x7f);
@@ -1643,6 +1557,15 @@ audio.addEventListener('pause',function(){
   if(!_transitioning) savePlaybackState();  // skip the src-swap pause, save real pauses only
 });
 audio.addEventListener('error',function(){ toast('Playlist is empty'); });
+  // Lazy duration — fills in the first time a track is actually played,
+// instead of probing every track at ingest time.
+audio.addEventListener('loadedmetadata',function(){
+  if(!curId || !audio.duration || isNaN(audio.duration)) return;
+  var t = trackById(curId);
+  if(!t || (t.dur && Math.abs(t.dur - audio.duration) < 0.5)) return;
+  t.dur = audio.duration;
+  try { dbPut(t); } catch(e){}
+});
 
 // Save position when the user switches apps, locks screen, or closes the tab
 document.addEventListener('visibilitychange', function(){
