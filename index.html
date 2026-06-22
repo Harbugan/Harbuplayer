@@ -999,16 +999,23 @@ function updatePlayerUI(t){
 var _ht=$('pl-hdr-title'), _hs=$('pl-hdr-sub');
   if(_ht) _ht.textContent = t ? t.name   : 'HarbuPlayer';
   if(_hs) _hs.textContent = t ? t.artist : '';
-  var art=$('pl-art');
+    var art=$('pl-art');
   // Reset stale swipe styles for non-swipe track changes (e.g. track ended naturally).
   // Skipped when _artSwiping is true — the swipe code takes ownership of the animation.
   if(!_artSwiping){
     art.style.transition=''; art.style.transform=''; art.style.opacity='';
   }
-  if(hasArt){
+  // Only rebuild the art element if the source has actually changed.
+  // Avoids blanking the image when artUrl is transiently falsy (e.g. during restore).
+  var _existingImg = art.querySelector('img');
+  var _wantUrl = hasArt ? t.artUrl : null;
+  var _currentUrl = _existingImg ? _existingImg.src : null;
+  if(_wantUrl && _wantUrl !== _currentUrl){
     art.innerHTML='<img src="'+t.artUrl+'" alt="'+esc(t.album||'')+'" '
       +'style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;">';
-  } else {
+  } else if(!_wantUrl && _existingImg){
+    art.innerHTML=svgVinyl(200);
+  } else if(!_wantUrl && !_existingImg && !art.querySelector('svg')){
     art.innerHTML=svgVinyl(200);
   }
   $('mini-title').textContent  = t ? t.name   : 'Nothing playing';
@@ -1520,11 +1527,12 @@ async function loadLibrary(){
       p.classList.toggle('on',p.dataset.s===sort);
     });
 
-    if(ci && trackById(ci)){
-      curId=ci;
-      var t=trackById(curId);
-      updatePlayerUI(t);
-      audio.src=t.url;
+      if(ci && trackById(ci)){
+        curId=ci;
+        var t=trackById(curId);
+        audio.src=t.url;
+        updatePlayerUI(t);
+
       audio.volume=$('vol-slider').value/100;
 
       // Restore queue and position within the queue
