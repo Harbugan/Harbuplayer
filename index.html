@@ -790,7 +790,8 @@ async function processFiles(files){
       var rec = {
         name:   (tags.title  || fb.title).trim()  || fb.title,
         artist: (tags.artist || fb.artist).trim() || fb.artist,
-        album:  (tags.album  || 'Unknown album').trim(),
+album:    (tags.album  || 'Unknown album').trim(),
+        trackNum: tags.trackNum || 0,
         fav: false, dur: null,
         fname: f.name, fsize: f.size,
         blob: f,
@@ -860,14 +861,15 @@ function parseID3(file){
             var sz=ver>=4?syncsafe(u8,off+4):(u8[off+4]<<24|u8[off+5]<<16|u8[off+6]<<8|u8[off+7]);
             if(sz<=0||sz>500000){off+=10;continue;}
             var data=u8.slice(off+10,off+10+sz);
-            if(fid==='TIT2'||fid==='TPE1'||fid==='TALB'){
-              var enc=data[0],str='';
+if(fid==='TIT2'||fid==='TPE1'||fid==='TALB'||fid==='TRCK'){
+          var enc=data[0],str='';
               if(enc===0)           str=decLatin1(data.slice(1)); // ISO-8859-1 — covers Æ Ø Å
               else if(enc===3)      str=decUTF8(data.slice(1));   // UTF-8
               else if(enc===1||enc===2) str=decUTF16(data.slice(1)); // UTF-16
-              if(fid==='TIT2')out.title=str.trim();
+if(fid==='TIT2')out.title=str.trim();
               else if(fid==='TPE1')out.artist=str.trim();
               else if(fid==='TALB')out.album=str.trim();
+              else if(fid==='TRCK')out.trackNum=parseInt(str,10)||0;
             } else if(fid==='APIC'){
               try{
                 var i2=1;
@@ -933,7 +935,16 @@ function _pickNextShuffle(){
 // playFromGroup() — builds queue from the specific album/artist group
 function playFromGroup(id, groupTracks){
   var t=trackById(id); if(!t) return;
-  queue=groupTracks.map(function(x){return x.id;});
+  var ordered = groupTracks.slice();
+  if(view==='albums'){
+    ordered.sort(function(a,b){
+      if(a.trackNum && b.trackNum) return a.trackNum - b.trackNum;
+      if(a.trackNum) return -1;
+      if(b.trackNum) return 1;
+      return a.name.localeCompare(b.name,'da',{sensitivity:'base'});
+    });
+  }
+  queue=ordered.map(function(x){return x.id;});
   qpos=queue.indexOf(id);
   if(qpos===-1){ qpos=0; }
   // Open the group when you start playing from it (user-initiated, not on every render)
@@ -1410,9 +1421,18 @@ var artistLabel = view==='albums' ? '<span class="grp-artist">'+esc(getDisplayAr
         +chevron
         +'</div>';
 
-      if(isOpen){
+if(isOpen){
         html+='<div class="grp-rows">';
-        groups[g].forEach(function(t){ html+=rowHTML(t); });
+        var sorted = groups[g].slice();
+        if(view==='albums'){
+          sorted.sort(function(a,b){
+            if(a.trackNum && b.trackNum) return a.trackNum - b.trackNum;
+            if(a.trackNum) return -1;
+            if(b.trackNum) return 1;
+            return a.name.localeCompare(b.name,'da',{sensitivity:'base'});
+          });
+        }
+        sorted.forEach(function(t){ html+=rowHTML(t); });
         html+='</div>';
       }
     });
