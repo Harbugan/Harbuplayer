@@ -595,7 +595,9 @@ var openGroups = {};   // key: groupName → true when expanded
 var theme = 'orange';
 var THEMES = ['orange','magenta','teal','grey','skeleton'];
 var _artSwiping = false; // true while a swipe-triggered art animation is in flight
-  var _nextShufflePos = -1; // pre-picked queue position for shuffle mode
+var _nextShufflePos = -1; // pre-picked queue position for shuffle mode
+var _shuffleHistory = []; // ids of last N tracks played in shuffle mode
+var SHUFFLE_HISTORY_MAX = 10;
   
 // ================================================================
 // UTILS
@@ -922,9 +924,24 @@ function play(id){
 function _pickNextShuffle(){
   if(!queue.length){ _nextShufflePos=-1; return; }
   if(queue.length===1){ _nextShufflePos=0; return; }
-  var pick;
-  do { pick=Math.floor(Math.random()*queue.length); } while(pick===qpos);
-  _nextShufflePos=pick;
+  // Push current track into history, capped at SHUFFLE_HISTORY_MAX
+  if(curId!=null){
+    _shuffleHistory.push(curId);
+    if(_shuffleHistory.length>SHUFFLE_HISTORY_MAX)
+      _shuffleHistory.shift();
+  }
+  // Build candidate list: exclude history, but shrink exclusion window
+  // gracefully if the library is too small to support the full history.
+  var maxExclude = Math.floor(queue.length / 2);
+  var recentIds  = _shuffleHistory.slice(-maxExclude);
+  var candidates = queue.filter(function(id, i){
+    return i!==qpos && recentIds.indexOf(id)===-1;
+  });
+  // Fallback: library too small — just avoid the current track
+  if(!candidates.length)
+    candidates = queue.filter(function(_, i){ return i!==qpos; });
+  var pick = candidates[Math.floor(Math.random()*candidates.length)];
+  _nextShufflePos = queue.indexOf(pick);
 }
   
 // playFromGroup() — builds queue from the specific album/artist group
@@ -990,7 +1007,16 @@ function nextTrack(){
 function prevTrack(){
   if(audio.currentTime>3){ audio.currentTime=0; return; }
   if(!queue.length) return;
-  if(shuffle) qpos=Math.floor(Math.random()*queue.length);
+  if(shuffle){
+    // Pop the last history entry to go back; fall back to random if history is empty
+    var prevId = _shuffleHistory.pop();
+    if(prevId!=null && trackById(prevId)){
+      qpos = queue.indexOf(prevId);
+      if(qpos===-1) qpos = Math.floor(Math.random()*queue.length);
+    } else {
+      qpos = Math.floor(Math.random()*queue.length);
+    }
+  }
   else qpos=(qpos-1+queue.length)%queue.length;
   var id=queue[qpos];
   var t=trackById(id); if(!t) return;
