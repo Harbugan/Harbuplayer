@@ -1749,21 +1749,28 @@ $('menu-btn').addEventListener('click', openMenu);
 $('menu-overlay').addEventListener('click', closeMenu);
 $('mnu-cancel').addEventListener('click', closeMenu);
 
-// Manage section collapse/expand
-var manageOpen = false;
-$('mnu-manage-hdr').addEventListener('click', function(){
-  manageOpen = !manageOpen;
-  $('mnu-manage-body').classList.toggle('open', manageOpen);
-  $('mnu-manage-chev').classList.toggle('open', manageOpen);
+// Collapsible menu sections — add new sections here as { hdr, body, chev }
+var MENU_SECTIONS = [
+  { hdr:'mnu-manage-hdr', body:'mnu-manage-body', chev:'mnu-manage-chev' },
+  { hdr:'mi-skin-hdr',    body:'mi-skin-body',    chev:'mi-skin-chev'    },
+  // { hdr:'mi-playback-hdr', body:'mi-playback-body', chev:'mi-playback-chev' },
+  // { hdr:'mi-device-hdr',   body:'mi-device-body',   chev:'mi-device-chev'   },
+];
+
+function toggleMenuSection(target){
+  MENU_SECTIONS.forEach(function(s){
+    var isTarget = s.hdr === target.hdr;
+    var open = isTarget ? !$(s.body).classList.contains('open') : false;
+    $(s.body).classList.toggle('open', open);
+    $(s.chev).classList.toggle('open', open);
+  });
+}
+
+MENU_SECTIONS.forEach(function(s){
+  $(s.hdr).addEventListener('click', function(){ toggleMenuSection(s); });
 });
 
-// Skin section collapse/expand + swatch selection
-var skinOpen = false;
-$('mi-skin-hdr').addEventListener('click', function(){
-  skinOpen = !skinOpen;
-  $('mi-skin-body').classList.toggle('open', skinOpen);
-  $('mi-skin-chev').classList.toggle('open', skinOpen);
-});
+// Skin section swatch selection
 document.querySelectorAll('.skin-swatch').forEach(function(sw){
   sw.addEventListener('click', function(){
     applyTheme(sw.dataset.theme);
