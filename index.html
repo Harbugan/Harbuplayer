@@ -733,6 +733,33 @@ body{display:flex;flex-direction:column}
 .mnu-update-btn[disabled]{opacity:.65;cursor:default}
 .mnu-update-btn svg{flex-shrink:0}
 .mnu-update-btn.spin svg{animation:spin .9s linear infinite}
+
+/* ===== EQ VISUALIZER OVERLAY ===== */
+#pl-eq{
+  position:absolute;bottom:12px;left:12px;
+  display:flex;align-items:flex-end;gap:3px;
+  height:20px;opacity:0;
+  transition:opacity .3s}
+#pl-art.playing #pl-eq{opacity:1}
+.eq-bar{
+  width:3px;border-radius:1.5px;
+  background:#fff;
+  transform-origin:bottom center;
+  animation:none}
+#pl-art.playing .eq-bar{animation:eqBounce var(--dur,0.7s) ease-in-out infinite alternate}
+.eq-bar:nth-child(1){--dur:.55s;height:8px; animation-delay:0s}
+.eq-bar:nth-child(2){--dur:.7s; height:14px;animation-delay:-.18s}
+.eq-bar:nth-child(3){--dur:.6s; height:10px;animation-delay:-.35s}
+.eq-bar:nth-child(4){--dur:.8s; height:16px;animation-delay:-.5s}
+.eq-bar:nth-child(5){--dur:.65s;height:9px; animation-delay:-.12s}
+@keyframes eqBounce{
+  from{transform:scaleY(1)}
+  to{transform:scaleY(.18)}
+}
+@media(prefers-reduced-motion:reduce){
+  #pl-art.playing .eq-bar{animation:none}
+  #pl-art.playing #pl-eq{opacity:.6}
+}
 </style>
 </head>
 <body>
@@ -787,8 +814,9 @@ body{display:flex;flex-direction:column}
       <div id="pl-drag-pill"></div>
     </div>
     <div id="pl-body">
-      <div id="pl-art">
+    <div id="pl-art">
         <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity=".35"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <div id="pl-eq"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>
       </div>
       <div id="pl-info">
         <div id="pl-title">No track selected</div>
@@ -1479,10 +1507,14 @@ var _ht=$('pl-hdr-title'), _hs=$('pl-hdr-sub');
   if(_wantUrl && _wantUrl !== _currentUrl){
     art.innerHTML='<img src="'+t.artUrl+'" alt="'+esc(t.album||'')+'" '
       +'style="width:100%;height:100%;object-fit:cover;object-position:center;display:block;">';
-  } else if(!_wantUrl && _existingImg){
+  } else {
     art.innerHTML=svgVinyl(200);
-  } else if(!_wantUrl && !_existingImg && !art.querySelector('svg')){
-    art.innerHTML=svgVinyl(200);
+  }
+  // Re-inject EQ overlay after innerHTML replace
+  if(!art.querySelector('#pl-eq')){
+    var eq=document.createElement('div'); eq.id='pl-eq';
+    for(var i=0;i<5;i++){ var b=document.createElement('div'); b.className='eq-bar'; eq.appendChild(b); }
+    art.appendChild(eq);
   }
   $('mini-title').textContent  = t ? t.name   : 'Nothing playing';
   $('mini-artist').textContent = t ? t.artist : '';
