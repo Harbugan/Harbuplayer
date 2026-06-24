@@ -1932,10 +1932,32 @@ async function _doFetchArt(rec){
     if(!apiResp.ok) return null;
     var data = await apiResp.json();
     if(!data.results || !data.results.length) return null;
+// Validate the result before trusting it. iTunes ranks by relevance, and the
+    // top hit for a vague/partial query can be a completely different album —
+    // that's why the same wrong cover kept appearing across albums and survived
+    // a library clear (same tags in = same wrong results[0] out).
+    var _n = function(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); };
+    var wantAlbum  = _n(rec.album);
+    var wantArtist = _n(rec.artist);
+    var hit = null;
+    for(var ri=0; ri<data.results.length; ri++){
+      var r = data.results[ri];
+      var col = _n(r.collectionName);
+      var art = _n(r.artistName);
+      var albumOk  = wantAlbum  && (col.indexOf(wantAlbum)!==-1  || wantAlbum.indexOf(col)!==-1);
+      var artistOk = wantArtist && (art.indexOf(wantArtist)!==-1 || wantArtist.indexOf(art)!==-1);
+      if(albumOk && artistOk){ hit = r; break; }
+    }
+    // Known album name but nothing matched → don't paste a wrong cover; leave the
+    // vinyl placeholder instead. Only fall back to the top hit for weak metadata.
+    if(!hit){
+      if(rec.album && rec.album !== 'Unknown album') return null;
+      hit = data.results[0];
+    }
 
     // 600px is ample for a 260px-max display at ~319ppi; 1000px wasted
     // both IndexedDB storage and resident RAM (bytes are held in lib[].pic).
-    var artUrl = (data.results[0].artworkUrl100 || '').replace('100x100bb','600x600bb');
+    var artUrl = (hit.artworkUrl100 || '').replace('100x100bb','600x600bb');
     if(!artUrl) return null;
 
     var imgResp = await fetch(artUrl);
