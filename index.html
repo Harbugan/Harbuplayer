@@ -1350,27 +1350,50 @@ function parseFallback(filename){
 // ================================================================
 function parseID3(file){
   return new Promise(function(res){
-    var out = {title:'',artist:'',album:'',pic:null};
-    var head = file.slice(0, Math.min(128*1024, file.size));
-    var fr = new FileReader();
-    fr.onload = function(e){
-      try {
-        var u8 = new Uint8Array(e.target.result);
-        if(u8[0]===0x49&&u8[1]===0x44&&u8[2]===0x33){
-          var ver=u8[3];
-          var hdrSize=syncsafe(u8,6);
-          var off=10, end=off+hdrSize;
+    var out = {title:'',artist:'',album:'',pic:null,trackNum:0};
+
+    // Read a byte range of the file as a Uint8Array (null on failure).
+    function readSlice(start, end){
+      return new Promise(function(resolve){
+        var fr = new FileReader();
+        fr.onload  = function(e){ resolve(new Uint8Array(e.target.result)); };
+        fr.onerror = function(){ resolve(null); };
+        fr.readAsArrayBuffer(file.slice(start, end));
+      });
+    }
+
+    // Stage 1 — read only the 10-byte ID3v2 header to learn the real tag size.
+    // The previous code read a fixed 128KB window, which truncated any embedded
+    // cover larger than that — producing the "half-loaded" image. We now size the
+    // read from the tag's own declared length so the whole APIC frame is included.
+    readSlice(0, 10).then(function(hdr){
+      if(!hdr || hdr.length < 10 ||
+         !(hdr[0]===0x49 && hdr[1]===0x44 && hdr[2]===0x33)){
+        res(out); return; // no ID3v2 tag — fall back to filename parsing upstream
+      }
+      var ver     = hdr[3];
+      var hdrSize = syncsafe(hdr, 6);                 // bytes after the 10-byte header
+      // Read the full tag. Cap at 4MB so a corrupt size field can't make us pull a
+      // huge slice of the file into memory.
+      var tagEnd  = Math.min(10 + hdrSize, file.size, 4*1024*1024);
+
+      // Stage 2 — read exactly the tag and parse frames.
+      readSlice(0, tagEnd).then(function(u8){
+        if(!u8){ res(out); return; }
+        try {
+          var off=10, end=Math.min(10+hdrSize, u8.length);
           while(off<end-10){
             var fid=String.fromCharCode(u8[off],u8[off+1],u8[off+2],u8[off+3]);
             var sz=ver>=4?syncsafe(u8,off+4):(u8[off+4]<<24|u8[off+5]<<16|u8[off+6]<<8|u8[off+7]);
-            if(sz<=0||sz>500000){off+=10;continue;}
+            // Raised from 500000 → covers up to ~3MB are now accepted instead of skipped.
+            if(sz<=0||sz>3000000){off+=10;continue;}
             var data=u8.slice(off+10,off+10+sz);
-if(fid==='TIT2'||fid==='TPE1'||fid==='TALB'||fid==='TRCK'){
-          var enc=data[0],str='';
+            if(fid==='TIT2'||fid==='TPE1'||fid==='TALB'||fid==='TRCK'){
+              var enc=data[0],str='';
               if(enc===0)           str=decLatin1(data.slice(1)); // ISO-8859-1 — covers Æ Ø Å
               else if(enc===3)      str=decUTF8(data.slice(1));   // UTF-8
               else if(enc===1||enc===2) str=decUTF16(data.slice(1)); // UTF-16
-if(fid==='TIT2')out.title=str.trim();
+              if(fid==='TIT2')out.title=str.trim();
               else if(fid==='TPE1')out.artist=str.trim();
               else if(fid==='TALB')out.album=str.trim();
               else if(fid==='TRCK')out.trackNum=parseInt(str,10)||0;
@@ -1386,12 +1409,10 @@ if(fid==='TIT2')out.title=str.trim();
             }
             off+=10+sz;
           }
-        }
-      } catch(ex){}
-      res(out);
-    };
-    fr.onerror=function(){ res(out); };
-    fr.readAsArrayBuffer(head);
+        } catch(ex){}
+        res(out);
+      });
+    });
   });
 }
 function syncsafe(u8,off){
