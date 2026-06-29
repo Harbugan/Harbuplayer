@@ -477,7 +477,7 @@ body{display:flex;flex-direction:column}
 #app{position:relative;flex:1;overflow:hidden}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;
   background:var(--bg);transition:transform .35s cubic-bezier(.4,0,.2,1)}
-.screen.off{transform:translateX(100%)}
+.screen.off{transform:translateX(100%);pointer-events:none}
 /* Player specifically pops up from the bottom */
 #player{transform:translateY(0)}
 #player.off{transform:translateY(100%)}
