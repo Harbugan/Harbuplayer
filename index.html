@@ -1589,7 +1589,6 @@ var _ht=$('pl-hdr-title'), _hs=$('pl-hdr-sub');
   mart.innerHTML = hasArt ? '' : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
 if(t) $('mini').classList.add('vis');
   updateUpNext();
-  if(shuffleMode) updateShuffleUI(trackById(curId));
 }
 
 // Returns the next track in the queue, or null when the result is unpredictable
@@ -2275,6 +2274,7 @@ audio.addEventListener('ended',function(){
   _stopSaveInterval();
   if(repeat){ audio.currentTime=0; audio.play(); }
   else nextTrack();
+  if(shuffleMode){ var _et=trackById(curId); if(_et) updateShuffleUI(_et); }
   savePlaybackState();
 });
 audio.addEventListener('play',function(){
@@ -2696,23 +2696,24 @@ $('vol-slider').addEventListener('input',function(){
     art.style.transform = 'translateX('+dx+'px) rotate('+(dx*0.03)+'deg)';
   },{passive:true});
 
-  function onEnd(){
+function onEnd(){
     if(!active) return; active=false;
     if(Math.abs(dx) > THRESHOLD && Math.abs(dx) > Math.abs(dy)){
       var dir = dx > 0 ? 1 : -1; // right = prev, left = next
       var W = art.offsetWidth + 60;
-      _artSwiping = true;
       art.style.transition = 'transform .18s ease-in, opacity .18s';
       art.style.transform  = 'translateX('+(dir*W)+'px) rotate('+(dir*18)+'deg)';
       art.style.opacity    = '0';
       setTimeout(function(){
         if(dir > 0) prevTrack(); else nextTrack();
+        // Update shuffle screen art directly — don't go through updatePlayerUI
+        var newT = trackById(curId);
+        if(newT) updateShuffleUI(newT);
         art.style.transition = 'none';
         art.style.transform  = 'translateX('+(-dir*60)+'px)';
         art.style.opacity    = '0';
         requestAnimationFrame(function(){
           requestAnimationFrame(function(){
-            _artSwiping = false;
             art.style.transition = 'transform .28s cubic-bezier(.2,0,.2,1), opacity .22s';
             art.style.transform  = '';
             art.style.opacity    = '1';
