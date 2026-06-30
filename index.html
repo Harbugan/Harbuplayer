@@ -2025,6 +2025,36 @@ function _stopSaveInterval(){
 // when audio.src is replaced from writing currentTime=0 over the real saved position.
 var _transitioning = false;
 
+// ================================================================
+// WAKE LOCK — keeps the CPU alive so track-to-track transitions
+// succeed when the screen turns off in battery saving mode.
+// The lock is requested on play and released on pause/stop.
+// It is silently ignored on browsers that don't support it.
+// ================================================================
+var _wakeLock = null;
+
+async function _acquireWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  // Already held — nothing to do
+  if(_wakeLock && !_wakeLock.released) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', function(){
+      // Re-acquire if audio is still playing (lock dropped on tab-hide then restore)
+      if(!audio.paused) _acquireWakeLock();
+    });
+  } catch(e){
+    // SecurityError (not HTTPS) or NotAllowedError (power saving blocked it) — ignore
+  }
+}
+
+function _releaseWakeLock(){
+  if(_wakeLock && !_wakeLock.released){
+    _wakeLock.release().catch(function(){});
+  }
+  _wakeLock = null;
+}
+
 async function loadLibrary(){
   try {
     var rows=await dbAll();
@@ -2148,6 +2178,7 @@ audio.addEventListener('play',function(){
   if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing';
   _transitioning = false;  // new track is live — saves are safe again
   _startSaveInterval();
+  _acquireWakeLock();
 });
 audio.addEventListener('pause',function(){
   $('pl-ico').innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';
@@ -2156,6 +2187,8 @@ audio.addEventListener('pause',function(){
   if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused';
   _stopSaveInterval();
   if(!_transitioning) savePlaybackState();  // skip the src-swap pause, save real pauses only
+  // Only fully release if this is a real user pause, not a src-swap
+  if(!_transitioning) _releaseWakeLock();
 });
 audio.addEventListener('error',function(){
   // Ignore the benign error fired when src is cleared (e.g. on library clear).
@@ -2174,7 +2207,13 @@ audio.addEventListener('loadedmetadata',function(){
 
 // Save position when the user switches apps, locks screen, or closes the tab
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'hidden') savePlaybackState();
+  if(document.visibilityState === 'hidden'){
+    savePlaybackState();
+  } else if(document.visibilityState === 'visible' && !audio.paused){
+    // Wake lock is automatically released while the page is hidden —
+    // re-acquire it now that the page is foregrounded again.
+    _acquireWakeLock();
+  }
 });
 window.addEventListener('beforeunload', savePlaybackState);
 
