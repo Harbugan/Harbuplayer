@@ -632,11 +632,13 @@
   boardEl.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
 
   // Service worker (valgfri – findes i roden af HarbuPlayer)
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js').catch(function () {});
-    });
-  }
+  try {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        try { navigator.serviceWorker.register('./sw.js').catch(function () {}); } catch (e) {}
+      });
+    }
+  } catch (e) {}   // sandboxed preview: service workers er ikke tilladt
 
   // Vis et stille demobræt bag startoverlayet
   fillBoard();
