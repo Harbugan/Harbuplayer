@@ -4,178 +4,259 @@
 <meta charset="utf-8">
 <title>HarbuZoo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0f1020">
-<meta name="description" content="HarbuZoo - et lille moderne match-3 dyrespil til mobilen.">
+<meta name="theme-color" content="#120a2e">
+<meta name="description" content="HarbuZoo - pixelart match-3 dyrespil i vanvittig japansk stil.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="HarbuZoo">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230f1020'/%3E%3Ctext x='90' y='126' font-size='96' text-anchor='middle'%3E%F0%9F%A6%81%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23120a2e'/%3E%3Ccircle cx='90' cy='100' r='56' fill='%23e8334a'/%3E%3Ctext x='90' y='122' font-size='72' text-anchor='middle'%3E%F0%9F%90%B1%3C/text%3E%3C/svg%3E">
+<!-- Pixelfont (valgfri – spillet virker også uden) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap" media="print" onload="this.media='all'">
 <style>
-  /* ---------- Grundlayout ---------- */
   :root {
-    --bg: #0f1020;
-    --bg2: #171a33;
-    --panel: rgba(255,255,255,.06);
-    --panel-line: rgba(255,255,255,.10);
-    --text: #f2f3ff;
-    --muted: #a4a8c8;
-    --accent: #58e1c0;
-    --warn: #ff6b7a;
-    --cs: 40px;          /* cellestørrelse, sættes af JS */
-    --gap: 3px;
-    --radius: 14px;
+    --ink: #1b1030;
+    --cream: #fff3d6;
+    --red: #e8334a;
+    --gold: #ffd23f;
+    --pink: #ff9db5;
+    --cyan: #36e0ff;
+    --lime: #9dff4a;
+    --panel: #2a1a52;
+    --panel2: #35216a;
+    --cs: 40px;
+    --sp: 36px;
+    --font: "Press Start 2P", ui-monospace, "SF Mono", Menlo, "Courier New", monospace;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; height: 100%;
-    overflow: hidden;                /* ingen scroll-bounce på iOS */
-    overscroll-behavior: none;
-    touch-action: manipulation;      /* ingen dobbelt-tap zoom */
-    background: var(--bg);
-    color: var(--text);
-    font: 500 16px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    overflow: hidden; overscroll-behavior: none; touch-action: manipulation;
+    background: #120a2e; color: var(--cream);
+    font-family: var(--font); font-size: 10px; line-height: 1.5;
     -webkit-user-select: none; user-select: none;
   }
-  body {
-    background:
-      radial-gradient(120% 80% at 50% -10%, #272c5a 0%, transparent 60%),
-      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+  #bg { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; z-index: 0; }
+  #petals { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+  .petal {
+    position: absolute; top: -12px; width: 6px; height: 6px; background: var(--pink);
+    box-shadow: 2px 2px 0 rgba(0,0,0,.25); opacity: .85;
+    animation: fall linear infinite;
+  }
+  @keyframes fall {
+    0%   { transform: translate(0,0); }
+    50%  { transform: translate(28px, 55vh); }
+    100% { transform: translate(-10px, 112vh); }
+  }
+
+  .app {
+    position: relative; z-index: 2;
+    width: 100%; max-width: 440px; height: 100%; margin: 0 auto;
     display: flex; flex-direction: column; align-items: center;
     padding: calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 8px);
   }
 
   /* ---------- Topbar ---------- */
-  header { width: 100%; max-width: 440px; display: flex; align-items: center; gap: 10px; }
-  .brand { font-size: 17px; font-weight: 800; letter-spacing: .3px; }
-  .brand span { color: var(--accent); }
+  header { width: 100%; display: flex; align-items: center; gap: 8px; }
+  .mascot { width: 40px; height: 40px; image-rendering: pixelated; flex: none; }
+  .mascot.hop { animation: hop .35s steps(4); }
+  @keyframes hop { 40% { transform: translateY(-8px) rotate(-6deg); } 100% { transform: none; } }
+  .hd { min-width: 0; }
+  .brand { font-size: 14px; color: var(--cream); text-shadow: 2px 2px 0 var(--ink), 0 0 0 var(--ink); letter-spacing: 1px; white-space: nowrap; }
+  .brand span { color: var(--red); }
+  .bubble {
+    margin-top: 4px; display: inline-block; max-width: 190px;
+    background: var(--cream); color: var(--ink); font-size: 7px; padding: 4px 6px;
+    border: 2px solid var(--ink); box-shadow: 2px 2px 0 rgba(0,0,0,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .spacer { flex: 1; }
-  .iconbtn {
-    width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--panel-line);
-    background: var(--panel); color: var(--text); font-size: 17px; line-height: 1;
-    display: grid; place-items: center; cursor: pointer;
+  .pbtn {
+    font-family: var(--font); color: var(--cream); cursor: pointer;
+    background: var(--panel2); border: 3px solid var(--ink);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), 0 4px 0 var(--ink);
   }
-  .iconbtn:active { transform: scale(.94); }
-  .iconbtn[aria-pressed="false"] { opacity: .45; }
+  .pbtn:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), 0 1px 0 var(--ink); }
+  .pbtn.sq { width: 38px; height: 38px; font-size: 14px; padding: 0; line-height: 1; }
+  .pbtn[aria-pressed="false"] { opacity: .5; }
 
-  /* ---------- Statusfelter ---------- */
-  .stats { width: 100%; max-width: 440px; display: flex; gap: 8px; margin: 10px 0 8px; }
+  /* ---------- Stats ---------- */
+  .stats { width: 100%; display: flex; gap: 8px; margin: 12px 0 8px; }
   .stat {
-    flex: 1; background: var(--panel); border: 1px solid var(--panel-line);
-    border-radius: var(--radius); padding: 7px 10px; text-align: center;
+    flex: 1; text-align: center; padding: 7px 4px 6px;
+    background: var(--panel); border: 3px solid var(--ink);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.12), 0 3px 0 var(--ink);
   }
-  .stat b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; }
-  .stat i { font-style: normal; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .stat b { display: block; font-size: 13px; font-weight: normal; color: var(--gold); }
+  .stat i { font-style: normal; font-size: 6px; letter-spacing: 1px; color: var(--pink); }
 
-  /* ---------- Tidslinje ---------- */
-  .timer { width: 100%; max-width: 440px; height: 9px; border-radius: 99px; background: var(--panel); overflow: hidden; }
-  .timer > div {
-    height: 100%; width: 100%; border-radius: 99px;
-    background: linear-gradient(90deg, var(--accent), #7aa7ff);
-    transform-origin: left center;
+  .timer {
+    width: 100%; height: 14px; background: var(--ink); border: 3px solid var(--ink);
+    box-shadow: 0 0 0 2px rgba(255,255,255,.16); padding: 0;
   }
-  .timer.low > div { background: linear-gradient(90deg, var(--warn), #ffa36b); }
+  #timerFill {
+    height: 100%; width: 100%;
+    background: repeating-linear-gradient(90deg, var(--lime) 0 6px, transparent 6px 8px);
+  }
+  .timer.low #timerFill { background: repeating-linear-gradient(90deg, var(--red) 0 6px, transparent 6px 8px); animation: blink .5s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .5; } }
 
-  /* ---------- Brættet ---------- */
-  .board-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+  /* ---------- Bræt ---------- */
+  .board-wrap { position: relative; flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
   #board {
-    position: relative;
+    position: relative; box-sizing: content-box;
     width: calc(var(--cs) * 8); height: calc(var(--cs) * 8);
-    background: rgba(0,0,0,.22);
-    border: 1px solid var(--panel-line);
-    border-radius: 18px;
-    touch-action: none;              /* vi styrer selv swipes */
+    border: 4px solid var(--red);
+    box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px var(--ink), inset 0 0 0 2px rgba(0,0,0,.35);
+    background-color: #241845;
+    background-image: conic-gradient(#2d1f55 25%, #231745 0 50%, #2d1f55 0 75%, #231745 0);
+    background-size: calc(var(--cs) * 2) calc(var(--cs) * 2);
+    touch-action: none;
   }
+  #board.shake { animation: bshake .3s steps(6); }
+  @keyframes bshake { 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px,-2px); } 60% { transform: translate(-3px,-2px); } 80% { transform: translate(3px, 2px); } }
+
   .tile {
-    position: absolute; top: 0; left: 0;
-    width: var(--cs); height: var(--cs);
-    display: grid; place-items: center;
-    font-size: calc(var(--cs) * .62);
-    will-change: transform;
+    position: absolute; top: 0; left: 0; width: var(--cs); height: var(--cs);
+    display: grid; place-items: center; z-index: 2; will-change: transform;
     transition: transform .17s cubic-bezier(.3,.9,.4,1);
   }
   .tile > i {
-    font-style: normal;
-    width: calc(var(--cs) - var(--gap) * 2); height: calc(var(--cs) - var(--gap) * 2);
-    display: grid; place-items: center;
-    border-radius: 12px;
-    background: rgba(255,255,255,.055);
-    transition: transform .15s ease, opacity .18s ease, background .15s ease;
+    position: relative; display: block;
+    width: calc(var(--cs) - 6px); height: calc(var(--cs) - 6px);
+    background-repeat: no-repeat; background-position: center; background-size: var(--sp) var(--sp);
+    image-rendering: pixelated;
+    transition: transform .15s steps(3), opacity .18s steps(3);
   }
-  .tile.sel > i { background: rgba(88,225,192,.26); transform: scale(1.08); }
-  .tile.hint > i { animation: hint .7s ease-in-out infinite; }
-  .tile.pop > i { transform: scale(.2) rotate(18deg); opacity: 0; }
-  .tile.bad { animation: shake .26s ease; }
-  @keyframes hint { 50% { transform: scale(1.12); background: rgba(255,255,255,.2); } }
+  .t0 { background-image: var(--s0); } .t1 { background-image: var(--s1); } .t2 { background-image: var(--s2); }
+  .t3 { background-image: var(--s3); } .t4 { background-image: var(--s4); } .t5 { background-image: var(--s5); }
+  .t6 { background-image: var(--s6); }
+
+  /* Specialbrikker */
+  .tile > i[class*="sp-"]::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-repeat: no-repeat; background-position: center; background-size: var(--sp) var(--sp);
+    image-rendering: pixelated;
+  }
+  .sp-row::after  { background-image: var(--ic-row); }
+  .sp-col::after  { background-image: var(--ic-col); }
+  .sp-bomb::after { background-image: var(--ic-bomb); }
+  .sp-row, .sp-col, .sp-bomb { outline: 2px solid var(--glow); outline-offset: -1px; animation: glow .7s steps(2) infinite; }
+  .sp-row  { --glow: var(--cyan); }
+  .sp-col  { --glow: var(--lime); }
+  .sp-bomb { --glow: var(--red); }
+  @keyframes glow { 50% { outline-color: #fff; filter: brightness(1.35); } }
+  .sp-rainbow { background-image: var(--orb); animation: hue 1.1s steps(8) infinite, bob .6s steps(2) infinite; }
+  @keyframes hue { to { filter: hue-rotate(360deg); } }
+  @keyframes bob { 50% { transform: scale(1.1); } }
+  .born { animation: born .35s steps(5); }
+  @keyframes born { 0% { transform: scale(2.2); filter: brightness(3); } 100% { transform: none; } }
+
+  .tile.sel > i { transform: scale(1.12); outline: 3px solid var(--gold); outline-offset: -1px; }
+  .tile.hint > i { animation: hint .6s steps(2) infinite; }
+  @keyframes hint { 50% { transform: scale(1.14); } }
+  .tile.pop > i { transform: scale(.2) rotate(25deg); opacity: 0; }
+  .tile.bad { animation: shake .26s steps(4); }
   @keyframes shake { 25% { margin-left: -4px; } 75% { margin-left: 4px; } }
 
-  /* Flydende point ved et match */
   .fx {
-    position: absolute; pointer-events: none; font-size: 14px; font-weight: 800;
-    color: var(--accent); text-shadow: 0 2px 8px rgba(0,0,0,.6);
-    animation: fx .75s ease-out forwards;
+    position: absolute; pointer-events: none; z-index: 5; text-align: center; white-space: nowrap;
+    font-size: 9px; color: var(--gold); text-shadow: 2px 2px 0 var(--ink);
+    animation: fx .8s steps(8) forwards;
   }
   @keyframes fx { to { transform: translateY(-34px); opacity: 0; } }
 
+  .beam { position: absolute; pointer-events: none; z-index: 4; animation: beam .45s steps(6) forwards; }
+  .beam.h { background: linear-gradient(var(--cyan), #fff, var(--cyan)); }
+  .beam.v { background: linear-gradient(90deg, var(--lime), #fff, var(--lime)); }
+  @keyframes beam { 0% { opacity: 1; } 100% { opacity: 0; transform: scale(1, .2); } }
+  .beam.v { animation-name: beamv; }
+  @keyframes beamv { 0% { opacity: 1; } 100% { opacity: 0; transform: scale(.2, 1); } }
+  .ring {
+    position: absolute; pointer-events: none; z-index: 4; border: 4px solid var(--gold);
+    background: rgba(232,51,74,.45); animation: ring .5s steps(6) forwards;
+  }
+  @keyframes ring { 0% { transform: translate(-50%,-50%) rotate(45deg) scale(.2); opacity: 1; } 100% { transform: translate(-50%,-50%) rotate(45deg) scale(1); opacity: 0; } }
+
+  /* ---------- Shuffle ---------- */
+  .bottom { width: 100%; display: flex; align-items: center; gap: 10px; padding-top: 10px; }
+  #shuffleBtn { flex: none; padding: 11px 12px; font-size: 10px; background: var(--red); display: flex; align-items: center; gap: 8px; }
+  #shuffleBtn b { background: var(--ink); color: var(--gold); padding: 3px 6px; font-weight: normal; }
+  #shuffleBtn:disabled { filter: grayscale(1); opacity: .5; }
+  .small { font-size: 7px; color: var(--cream); text-shadow: 1px 1px 0 var(--ink); line-height: 1.7; }
+
   /* ---------- Overlay ---------- */
   #overlay {
-    position: fixed; inset: 0; z-index: 10;
-    display: grid; place-items: center; padding: 24px;
-    background: rgba(8,9,20,.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 18px;
+    background: rgba(10,5,28,.82);
   }
   #overlay[hidden] { display: none; }
   .card {
-    width: 100%; max-width: 340px; text-align: center;
-    background: linear-gradient(180deg, #1d2142, #15172e);
-    border: 1px solid var(--panel-line); border-radius: 22px; padding: 24px 20px;
+    width: 100%; max-width: 360px; text-align: center; padding: 18px 16px 18px;
+    background: var(--panel); border: 4px solid var(--ink);
+    box-shadow: inset 0 0 0 3px var(--red), 0 6px 0 var(--ink);
   }
-  .card h1 { margin: 0 0 6px; font-size: 26px; }
-  .card p { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.5; }
-  .big { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .card canvas { width: 72px; height: 72px; image-rendering: pixelated; }
+  .card h1 { margin: 8px 0 2px; font-size: 18px; font-weight: normal; text-shadow: 3px 3px 0 var(--ink); }
+  .card h1 span { color: var(--red); }
+  .jp { font-size: 10px; color: var(--pink); margin-bottom: 12px; font-family: "Hiragino Sans", "Noto Sans JP", var(--font); }
+  .big { font-size: 26px; color: var(--gold); margin: 6px 0 10px; text-shadow: 3px 3px 0 var(--ink); }
+  .rules { text-align: left; font-size: 7px; line-height: 2; margin: 0 0 14px; font-family: var(--font); }
+  .rules p { margin: 0 0 6px; }
+  .rules b { font-weight: normal; }
+  .c1 { color: var(--cyan); } .c2 { color: var(--red); } .c3 { color: var(--gold); } .c4 { color: var(--lime); }
   button.play {
-    width: 100%; padding: 14px; font-size: 17px; font-weight: 800; color: #06241e;
-    background: linear-gradient(180deg, #6ff0cf, var(--accent));
-    border: 0; border-radius: 14px; cursor: pointer;
+    width: 100%; padding: 14px 8px; font-size: 12px; color: var(--ink);
+    background: var(--gold); border: 3px solid var(--ink); cursor: pointer; font-family: var(--font);
+    box-shadow: inset 0 0 0 2px #fff6, 0 4px 0 var(--ink);
   }
-  button.play:active { transform: scale(.98); }
-
-  .toast {
-    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 18px);
-    transform: translateX(-50%); z-index: 9;
-    background: rgba(20,22,45,.95); border: 1px solid var(--panel-line);
-    padding: 9px 15px; border-radius: 99px; font-size: 13px; opacity: 0;
-    transition: opacity .25s ease; pointer-events: none;
-  }
-  .toast.on { opacity: 1; }
+  button.play:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px #fff6, 0 1px 0 var(--ink); }
 </style>
 </head>
 <body>
+<canvas id="bg"></canvas>
+<div id="petals"></div>
 
-<header>
-  <div class="brand">Harbu<span>Zoo</span></div>
-  <div class="spacer"></div>
-  <button class="iconbtn" id="soundBtn" aria-pressed="true" title="Lyd">&#128266;</button>
-  <button class="iconbtn" id="restartBtn" title="Nyt spil">&#8635;</button>
-</header>
+<div class="app">
+  <header>
+    <canvas id="mascot" class="mascot" width="36" height="36"></canvas>
+    <div class="hd">
+      <div class="brand">HARBU<span>ZOO</span></div>
+      <div class="bubble" id="bubble">GANBATTE!</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="pbtn sq" id="soundBtn" aria-pressed="true" title="Lyd">&#9834;</button>
+    <button class="pbtn sq" id="restartBtn" title="Nyt spil">&#8635;</button>
+  </header>
 
-<div class="stats">
-  <div class="stat"><b id="score">0</b><i>Point</i></div>
-  <div class="stat"><b id="level">1</b><i>Niveau</i></div>
-  <div class="stat"><b id="best">0</b><i>Rekord</i></div>
+  <div class="stats">
+    <div class="stat"><b id="score">0</b><i>POINT</i></div>
+    <div class="stat"><b id="level">1</b><i>LEVEL</i></div>
+    <div class="stat"><b id="best">0</b><i>REKORD</i></div>
+  </div>
+
+  <div class="timer" id="timer"><div id="timerFill"></div></div>
+
+  <div class="board-wrap" id="wrap"><div id="board"></div></div>
+
+  <div class="bottom">
+    <button class="pbtn" id="shuffleBtn">SHUFFLE <b id="shufN">2</b></button>
+    <div class="small" id="shufHint">+1 ved 1000 point</div>
+  </div>
 </div>
-
-<div class="timer" id="timer"><div id="timerFill"></div></div>
-
-<div class="board-wrap"><div id="board"></div></div>
-
-<div class="toast" id="toast"></div>
 
 <div id="overlay">
   <div class="card">
-    <h1 id="ovTitle">HarbuZoo</h1>
+    <canvas id="bigMascot" width="72" height="72"></canvas>
+    <h1 id="ovTitle">HARBU<span>ZOO</span></h1>
+    <div class="jp" id="ovJp">どうぶつパズル</div>
     <div class="big" id="ovScore" hidden>0</div>
-    <p id="ovText">Byt to dyr, der st&oslash;der op til hinanden, og saml tre eller flere p&aring; stribe. Hvert match giver point og mere tid.</p>
-    <button class="play" id="playBtn">Start spillet</button>
+    <div class="rules" id="ovText">
+      <p>Byt to naboer. 3 p&aring; stribe forsvinder.</p>
+      <p><b class="c1">4 i tr&aelig;k</b> = KATANA, rydder r&aelig;kke eller kolonne.</p>
+      <p><b class="c2">L eller T</b> = BAKUDAN, sprænger et omr&aring;de.</p>
+      <p><b class="c3">5 i tr&aelig;k</b> = NIJI. Byt den med et dyr og fjern dem alle.</p>
+    </div>
+    <button class="play" id="playBtn">START!</button>
   </div>
 </div>
 
@@ -184,91 +265,364 @@
   'use strict';
 
   // ====================== Konstanter ======================
-  var SIZE   = 8;                                   // 8x8 bræt
-  var ANIMALS = ['🦁','🐵','🐼','🐸','🐧','🐨','🦊']; // sidste dyr låses op på højere niveauer
-  var TIME_MAX    = 60;      // sekunder på fuld bar
-  var TIME_START  = 42;
-  var TIME_PER_TILE = 0.55;  // tid pr. ryddet brik
-  var LEVEL_STEP  = 1200;    // point pr. niveau
-  var SWAP_MS = 170, POP_MS = 190, FALL_MS = 200;
+  var SIZE = 8;
+  var TYPES = 7;                 // neko, tanuki, kitsune, panda, kappa, tako, hiyoko
+  var TIME_MAX = 60, TIME_START = 42, TIME_PER_TILE = 0.5;
+  var LEVEL_STEP = 1200;
+  var SHUFFLE_START = 2, SHUFFLE_EVERY = 1000, SHUFFLE_CAP = 9;
+  var SWAP_MS = 170, POP_MS = 220, FALL_MS = 210;
+
+  // ====================== Pixelart (12x12) ======================
+  var SPRITES = [
+    { // 0 Maneki-neko
+      pal: { K:'#2a1a2e', W:'#fffaf0', P:'#ff9db5', R:'#e8334a', Y:'#ffd23f', O:'#f5a04a' },
+      rows: [
+        '.KK......KK.',
+        'KPPK....KPPK',
+        'KPWWKKKKWWPK',
+        'KWWWWWWWWWWK',
+        'KWWKWWWWKWWK',
+        'KOWKWWWWKWOK',
+        'KWWWWPPWWWWK',
+        '.KWWWKKWWWK.',
+        '..KKWWWWKK..',
+        '.KRRRRRRRRK.',
+        '..KRRYYRRK..',
+        '...KKKKKK...']
+    },
+    { // 1 Tanuki
+      pal: { K:'#2a1a2e', B:'#9a6330', D:'#3b2314', C:'#ecd7ab', G:'#4cc66a', W:'#ffffff' },
+      rows: [
+        '....KGGK....',
+        '.KK.KGGK.KK.',
+        'KBBKBBBBKBBK',
+        'KBBBBBBBBBBK',
+        'KBDDBBBBDDBK',
+        'KBDWDBBDWDBK',
+        'KBBCCDDCCBBK',
+        '.KBCCCCCCBK.',
+        '..KBBBBBBK..',
+        '...KBBBBK...',
+        '..KBBBBBBK..',
+        '...KKKKKK...']
+    },
+    { // 2 Kitsune
+      pal: { K:'#2a1a2e', O:'#ff7a1a', W:'#fff6e8', D:'#3b1a10' },
+      rows: [
+        'KK........KK',
+        'KOK......KOK',
+        'KOOK....KOOK',
+        'KOOOKKKKOOOK',
+        'KOOOOOOOOOOK',
+        'KOKKOOOOKKOK',
+        'KWOOOOOOOOWK',
+        'KWWWOOOOWWWK',
+        '.KWWWDDWWWK.',
+        '..KWWWWWWK..',
+        '...KWWWWK...',
+        '....KKKK....']
+    },
+    { // 3 Panda
+      pal: { K:'#1a1a24', N:'#3a3a4a', W:'#ffffff' },
+      rows: [
+        'KKK......KKK',
+        'KKKK....KKKK',
+        'NKKWWWWWWKKN',
+        'NWWWWWWWWWWN',
+        'NWKKKWWKKKWN',
+        'NWKWKWWKWKWN',
+        'NWKKKWWKKKWN',
+        'NWWWWKKWWWWN',
+        'NWWWKWWKWWWN',
+        '.NWWWKKWWWN.',
+        '..NNWWWWNN..',
+        '....NNNN....']
+    },
+    { // 4 Kappa
+      pal: { K:'#12301e', G:'#3fbf6a', D:'#1f7a42', Y:'#ffd23f', C:'#7fe3ff', W:'#ffffff' },
+      rows: [
+        '...KKKKKK...',
+        '..KCCCCCCK..',
+        '.KGKKKKKKGK.',
+        'KGGGGGGGGGGK',
+        'KGWWWGGWWWGK',
+        'KGWKWGGWKWGK',
+        'KGGGGGGGGGGK',
+        'KGYYYYYYYYGK',
+        '.KYYYYYYYYK.',
+        '..KGDDDDGK..',
+        '...KDDDDK...',
+        '....KKKK....']
+    },
+    { // 5 Tako
+      pal: { K:'#26103f', P:'#a259e0', L:'#d2a6ff', W:'#ffffff', C:'#ff9db5' },
+      rows: [
+        '...KKKKKK...',
+        '..KPPPPPPK..',
+        '.KPLLPPPPPK.',
+        'KPPPPPPPPPPK',
+        'KPWWPPPPWWPK',
+        'KPWKPPPPKWPK',
+        'KPCPPPPPPCPK',
+        'KPPPPKKPPPPK',
+        '.KPPPPPPPPK.',
+        'KPKPKPPKPKPK',
+        'PP.PP..PP.PP',
+        'K..KK..KK..K']
+    },
+    { // 6 Hiyoko
+      pal: { K:'#3a2a10', Y:'#ffe14a', O:'#ff8a1a', C:'#ff9d7a' },
+      rows: [
+        '.....KK.....',
+        '....KYYK....',
+        '...KYYYYK...',
+        '..KYYYYYYK..',
+        '.KYYYYYYYYK.',
+        'KYYKYYYYKYYK',
+        'KYYKYYYYKYYK',
+        'KYCYYOOYYCYK',
+        'KYYYYOOYYYYK',
+        '.KYYYYYYYYK.',
+        '..KKYYYYKK..',
+        '...OO..OO...']
+    }
+  ];
+  var INK = '#2a1a2e';
+
+  function spriteCanvas(def, px, canvas) {
+    var N = 12;
+    var c = canvas || document.createElement('canvas');
+    c.width = c.height = N * px;
+    var g = c.getContext('2d');
+    g.clearRect(0, 0, c.width, c.height);
+    for (var y = 0; y < N; y++) {
+      for (var x = 0; x < N; x++) {
+        var ch = def.rows[y].charAt(x);
+        if (ch === '.' || !def.pal[ch]) continue;
+        g.fillStyle = def.pal[ch];
+        g.fillRect(x * px, y * px, px, px);
+      }
+    }
+    return c;
+  }
+
+  // Små pixel-tegninger bygget af punkter
+  function plotCanvas(px, draw) {
+    var N = 12, grid = {};
+    function put(x, y, col) { if (x >= 0 && y >= 0 && x < N && y < N) grid[x + ',' + y] = col; }
+    draw(put);
+    var c = document.createElement('canvas');
+    c.width = c.height = N * px;
+    var g = c.getContext('2d');
+    var keys = Object.keys(grid), k, p;
+    var outline = {};
+    keys.forEach(function (key) {                         // sort kant rundt om figuren
+      p = key.split(',');
+      var x = +p[0], y = +p[1];
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(function (d) {
+        var nk = (x + d[0]) + ',' + (y + d[1]);
+        if (!grid[nk] && x + d[0] >= 0 && y + d[1] >= 0 && x + d[0] < N && y + d[1] < N) outline[nk] = 1;
+      });
+    });
+    g.fillStyle = INK;
+    Object.keys(outline).forEach(function (key) { p = key.split(','); g.fillRect(p[0] * px, p[1] * px, px, px); });
+    keys.forEach(function (key) { p = key.split(','); g.fillStyle = grid[key]; g.fillRect(p[0] * px, p[1] * px, px, px); });
+    return c;
+  }
+  function iconRow(px) {
+    return plotCanvas(px, function (put) {
+      var L = [[0,5],[0,6],[1,4],[1,5],[1,6],[1,7]];
+      L.forEach(function (p) { put(p[0], p[1], '#36e0ff'); put(11 - p[0], p[1], '#36e0ff'); });
+    });
+  }
+  function iconCol(px) {
+    return plotCanvas(px, function (put) {
+      var L = [[5,0],[6,0],[4,1],[5,1],[6,1],[7,1]];
+      L.forEach(function (p) { put(p[0], p[1], '#9dff4a'); put(p[0], 11 - p[1], '#9dff4a'); });
+    });
+  }
+  function iconBomb(px) {
+    return plotCanvas(px, function (put) {
+      [[9,1],[9,2],[9,3],[8,2],[10,2]].forEach(function (p) { put(p[0], p[1], '#ffd23f'); put(11 - p[0], 11 - p[1], '#ffd23f'); });
+      put(9, 2, '#ffffff'); put(2, 9, '#ffffff');
+    });
+  }
+  function orbCanvas(px) {
+    var N = 12, c = document.createElement('canvas');
+    c.width = c.height = N * px;
+    var g = c.getContext('2d');
+    var bands = ['#e8334a', '#ff8a1a', '#ffd23f', '#6bdc6a', '#36b6ff', '#a259e0'];
+    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+      var d = Math.sqrt((x - 5.5) * (x - 5.5) + (y - 5.5) * (y - 5.5));
+      if (d <= 4.7) g.fillStyle = bands[Math.min(5, Math.floor(y / 2))];
+      else if (d <= 5.7) g.fillStyle = INK;
+      else continue;
+      g.fillRect(x * px, y * px, px, px);
+    }
+    g.fillStyle = '#ffffff';
+    [[3,3],[4,3],[3,4],[7,8]].forEach(function (p) { g.fillRect(p[0] * px, p[1] * px, px, px); });
+    return c;
+  }
+
+  var root = document.documentElement;
+  var curPx = 0;
+  function setSprites(px) {
+    curPx = px;
+    for (var i = 0; i < TYPES; i++) root.style.setProperty('--s' + i, 'url(' + spriteCanvas(SPRITES[i], px).toDataURL() + ')');
+    root.style.setProperty('--ic-row',  'url(' + iconRow(px).toDataURL() + ')');
+    root.style.setProperty('--ic-col',  'url(' + iconCol(px).toDataURL() + ')');
+    root.style.setProperty('--ic-bomb', 'url(' + iconBomb(px).toDataURL() + ')');
+    root.style.setProperty('--orb',     'url(' + orbCanvas(px).toDataURL() + ')');
+    root.style.setProperty('--sp', (12 * px) + 'px');
+  }
+
+  // ====================== Baggrund (pixelart-landskab) ======================
+  var bgEl = document.getElementById('bg');
+  function drawBg() {
+    var S = 4, w = Math.ceil(window.innerWidth / S), h = Math.ceil(window.innerHeight / S);
+    bgEl.width = w; bgEl.height = h;
+    var g = bgEl.getContext('2d');
+    var hy = Math.floor(h * 0.74);
+    var bands = ['#120a2e', '#1a0f3d', '#26134d', '#3a1a5c', '#55216b', '#7a2b78', '#a63a7f', '#d4547f'];
+    var bh = Math.ceil(hy / bands.length), i, x, y;
+    for (i = 0; i < bands.length; i++) { g.fillStyle = bands[i]; g.fillRect(0, i * bh, w, bh); }
+    var seed = 7;
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    g.fillStyle = '#fff3d6';
+    for (i = 0; i < 45; i++) g.fillRect(Math.floor(rnd() * w), Math.floor(rnd() * hy * 0.55), 1, 1);
+    // solen
+    var r = Math.max(8, Math.floor(h * 0.09)), sx = Math.floor(w * 0.76), sy = hy - Math.floor(h * 0.30);
+    g.fillStyle = '#e8334a';
+    for (y = -r; y <= r; y++) for (x = -r; x <= r; x++) if (x * x + y * y <= r * r) g.fillRect(sx + x, sy + y, 1, 1);
+    // Fuji
+    var fh = Math.floor(h * 0.5), fx = Math.floor(w * 0.3), top = hy - fh;
+    var capH = Math.floor(fh * 0.1);
+    for (y = top; y < hy; y++) {
+      var half = y - top;
+      for (x = -half; x < half; x++) {
+        var zig = Math.round(Math.sin(x * 0.85) * 2 + Math.sin(x * 0.31) * 3);
+        g.fillStyle = (y - top) < capH + zig ? '#fff3d6' : ((x + y) % 11 === 0 ? '#3d2778' : '#33206a');
+        g.fillRect(fx + x, y, 1, 1);
+      }
+    }
+    // skyer
+    g.fillStyle = 'rgba(255,157,181,.55)';
+    [[0.08,0.30,16],[0.62,0.20,12],[0.46,0.42,10]].forEach(function (c) {
+      var cx = Math.floor(w * c[0]), cy = Math.floor(h * c[1]), cw = c[2];
+      g.fillRect(cx, cy, cw, 2); g.fillRect(cx + 3, cy - 2, cw - 7, 2); g.fillRect(cx - 3, cy + 2, cw + 4, 1);
+    });
+    // jord og vand
+    g.fillStyle = '#1b1030'; g.fillRect(0, hy, w, h - hy);
+    for (y = hy + 2; y < h; y += 3) { g.fillStyle = (y / 3 | 0) % 2 ? '#241845' : '#2d1f55'; g.fillRect(0, y, w, 1); }
+    // torii
+    var tx = Math.floor(w * 0.86), tb = hy + Math.floor((h - hy) * 0.35), th = Math.floor(h * 0.14);
+    g.fillStyle = '#e8334a';
+    g.fillRect(tx - 9, tb - th, 3, th); g.fillRect(tx + 6, tb - th, 3, th);
+    g.fillRect(tx - 13, tb - th - 4, 27, 3); g.fillRect(tx - 10, tb - th + 3, 21, 2);
+    g.fillStyle = '#1b1030'; g.fillRect(tx - 14, tb - th - 5, 29, 1);
+  }
+
+  function makePetals() {
+    var box = document.getElementById('petals');
+    for (var i = 0; i < 9; i++) {
+      var p = document.createElement('div');
+      p.className = 'petal';
+      p.style.left = (Math.random() * 100) + '%';
+      p.style.animationDuration = (9 + Math.random() * 9) + 's';
+      p.style.animationDelay = (-Math.random() * 14) + 's';
+      box.appendChild(p);
+    }
+  }
 
   // ====================== DOM ======================
-  var boardEl  = document.getElementById('board');
-  var scoreEl  = document.getElementById('score');
-  var levelEl  = document.getElementById('level');
-  var bestEl   = document.getElementById('best');
-  var timerEl  = document.getElementById('timer');
-  var fillEl   = document.getElementById('timerFill');
-  var overlay  = document.getElementById('overlay');
-  var ovTitle  = document.getElementById('ovTitle');
-  var ovText   = document.getElementById('ovText');
-  var ovScore  = document.getElementById('ovScore');
-  var playBtn  = document.getElementById('playBtn');
-  var toastEl  = document.getElementById('toast');
-  var soundBtn = document.getElementById('soundBtn');
+  function $(id) { return document.getElementById(id); }
+  var boardEl = $('board'), wrapEl = $('wrap');
+  var scoreEl = $('score'), levelEl = $('level'), bestEl = $('best');
+  var timerEl = $('timer'), fillEl = $('timerFill');
+  var overlay = $('overlay'), ovTitle = $('ovTitle'), ovJp = $('ovJp'), ovText = $('ovText'), ovScore = $('ovScore');
+  var playBtn = $('playBtn'), soundBtn = $('soundBtn'), shuffleBtn = $('shuffleBtn');
+  var shufN = $('shufN'), shufHint = $('shufHint'), bubble = $('bubble');
+  var mascot = $('mascot');
 
   // ====================== Tilstand ======================
-  var board = new Array(SIZE * SIZE).fill(null); // brikobjekter
+  var board = new Array(SIZE * SIZE).fill(null);
   var score = 0, level = 1, timeLeft = TIME_START;
-  var running = false, busy = false;              // busy = animation i gang
+  var shuffles = SHUFFLE_START, nextShuffleAt = SHUFFLE_EVERY;
+  var running = false, busy = false;
   var selected = null, uid = 0;
   var lastTick = 0, idleSince = 0, hintTiles = [];
   var best = 0;
   try { best = parseInt(localStorage.getItem('harbuzoo.best') || '0', 10) || 0; } catch (e) {}
   bestEl.textContent = best;
-
   var soundOn = true;
   try { soundOn = localStorage.getItem('harbuzoo.sound') !== 'off'; } catch (e) {}
   soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
 
   function idx(r, c) { return r * SIZE + c; }
   function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
-  function typeCount() { return Math.min(ANIMALS.length, 6 + Math.floor((level - 1) / 4)); }
+  function typeCount() { return Math.min(TYPES, 6 + Math.floor((level - 1) / 4)); }
   function randType() { return Math.floor(Math.random() * typeCount()); }
+  function cell() { return parseFloat(getComputedStyle(root).getPropertyValue('--cs')) || 40; }
 
-  // ====================== Lyd (små WebAudio-blip) ======================
+  // ====================== Lyd (chiptune, pentatonisk) ======================
   var actx = null;
-  function beep(freq, dur, vol) {
+  var SCALE = [262, 294, 330, 392, 440, 523, 587, 659, 784, 880, 988, 1175];
+  function beep(freq, dur, vol, type) {
     if (!soundOn) return;
     try {
       if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
       if (actx.state === 'suspended') actx.resume();
-      var o = actx.createOscillator(), g = actx.createGain();
-      o.type = 'triangle';
+      var o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+      o.type = type || 'square';
       o.frequency.value = freq;
-      g.gain.setValueAtTime(0, actx.currentTime);
-      g.gain.linearRampToValueAtTime(vol || 0.06, actx.currentTime + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + (dur || 0.12));
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol || 0.04, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.12));
       o.connect(g); g.connect(actx.destination);
-      o.start(); o.stop(actx.currentTime + (dur || 0.12) + 0.02);
+      o.start(t); o.stop(t + (dur || 0.12) + 0.02);
     } catch (e) {}
   }
+  function arp(notes, gap) { notes.forEach(function (n, i) { setTimeout(function () { beep(SCALE[n], .11, .04); }, i * (gap || 70)); }); }
   function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 
-  // ====================== Responsiv cellestørrelse ======================
+  // ====================== Maskot og sprechblase ======================
+  var IDLE = ['GANBATTE!', 'KAWAII ZOO!', 'FIGHT-O!', 'ITADAKIMASU!', 'SA, IKOU!'];
+  var sayT = null;
+  function say(t) {
+    bubble.textContent = t;
+    mascot.classList.remove('hop'); void mascot.offsetWidth; mascot.classList.add('hop');
+    clearTimeout(sayT);
+    sayT = setTimeout(function () { bubble.textContent = IDLE[Math.floor(Math.random() * IDLE.length)]; }, 2400);
+  }
+
+  // ====================== Layout ======================
   function layout() {
-    var chromeH = 210;                                   // topbar + stats + timer + luft
-    var availH  = window.innerHeight - chromeH;
-    var availW  = Math.min(window.innerWidth - 24, 440);
-    var cs = Math.floor(Math.min(availW, availH) / SIZE);
-    cs = Math.max(30, Math.min(cs, 64));
-    document.documentElement.style.setProperty('--cs', cs + 'px');
+    var r = wrapEl.getBoundingClientRect();
+    var cs = Math.floor(Math.min(r.width - 24, r.height - 24) / SIZE);
+    cs = Math.max(28, Math.min(cs, 64));
+    root.style.setProperty('--cs', cs + 'px');
+    var px = Math.max(1, Math.floor((cs - 6) / 12));
+    if (px !== curPx) setSprites(px);
     for (var i = 0; i < board.length; i++) if (board[i]) place(board[i], false);
   }
-  function cell() { return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cs')); }
 
   // ====================== Brikker ======================
+  function paint(t) {
+    t.i.className = t.special === 'rainbow' ? 'sp-rainbow' : 't' + t.type + (t.special ? ' sp-' + t.special : '');
+  }
   function place(t, animate) {
     var cs = cell();
     if (!animate) t.el.style.transition = 'none';
     t.el.style.transform = 'translate3d(' + (t.c * cs) + 'px,' + (t.r * cs) + 'px,0)';
     if (!animate) { void t.el.offsetWidth; t.el.style.transition = ''; }
   }
-  function makeTile(type, r, c) {
+  function makeTile(type, r, c, special) {
     var el = document.createElement('div');
     el.className = 'tile';
-    el.innerHTML = '<i>' + ANIMALS[type] + '</i>';
-    var t = { id: ++uid, type: type, r: r, c: c, el: el };
+    var inner = document.createElement('i');
+    el.appendChild(inner);
+    var t = { id: ++uid, type: type, special: special || null, r: r, c: c, el: el, i: inner };
+    paint(t);
     boardEl.appendChild(el);
     place(t, false);
     return t;
@@ -276,30 +630,85 @@
   function removeTile(t) { if (t && t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el); }
 
   // ====================== Matchlogik ======================
-  function findMatches() {
-    var hits = new Set();
-    var r, c, run, i;
-    for (r = 0; r < SIZE; r++) {                       // vandrette striber
+  function same(a, b) { return a && b && a.special !== 'rainbow' && b.special !== 'rainbow' && a.type === b.type; }
+
+  function findRuns() {
+    var runs = [], r, c, run, i, cells;
+    for (r = 0; r < SIZE; r++) {
       run = 1;
       for (c = 1; c <= SIZE; c++) {
-        var a = c < SIZE ? board[idx(r, c)] : null;
-        var b = board[idx(r, c - 1)];
-        if (a && b && a.type === b.type) { run++; continue; }
-        if (run >= 3) for (i = c - run; i < c; i++) hits.add(idx(r, i));
+        if (c < SIZE && same(board[idx(r, c)], board[idx(r, c - 1)])) { run++; continue; }
+        if (run >= 3) { cells = []; for (i = c - run; i < c; i++) cells.push(idx(r, i)); runs.push({ dir: 'h', cells: cells }); }
         run = 1;
       }
     }
-    for (c = 0; c < SIZE; c++) {                       // lodrette striber
+    for (c = 0; c < SIZE; c++) {
       run = 1;
       for (r = 1; r <= SIZE; r++) {
-        var a2 = r < SIZE ? board[idx(r, c)] : null;
-        var b2 = board[idx(r - 1, c)];
-        if (a2 && b2 && a2.type === b2.type) { run++; continue; }
-        if (run >= 3) for (i = r - run; i < r; i++) hits.add(idx(i, c));
+        if (r < SIZE && same(board[idx(r, c)], board[idx(r - 1, c)])) { run++; continue; }
+        if (run >= 3) { cells = []; for (i = r - run; i < r; i++) cells.push(idx(i, c)); runs.push({ dir: 'v', cells: cells }); }
         run = 1;
       }
     }
-    return hits;
+    return runs;
+  }
+  // Runs der deler en brik hører sammen (L, T og kryds)
+  function findGroups() {
+    var runs = findRuns(), parent = runs.map(function (_, k) { return k; });
+    function find(a) { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; }
+    var owner = {};
+    runs.forEach(function (run, k) {
+      run.cells.forEach(function (cc) {
+        if (owner[cc] === undefined) owner[cc] = k; else parent[find(k)] = find(owner[cc]);
+      });
+    });
+    var map = {}, groups = [];
+    runs.forEach(function (run, k) {
+      var root_ = find(k);
+      if (!map[root_]) { map[root_] = { runs: [], cells: new Set() }; groups.push(map[root_]); }
+      map[root_].runs.push(run);
+      run.cells.forEach(function (cc) { map[root_].cells.add(cc); });
+    });
+    return groups;
+  }
+  function findMatches() {
+    var s = new Set();
+    findRuns().forEach(function (run) { run.cells.forEach(function (c) { s.add(c); }); });
+    return s;
+  }
+
+  function intersection(g) {
+    var hs = new Set();
+    g.runs.forEach(function (r) { if (r.dir === 'h') r.cells.forEach(function (c) { hs.add(c); }); });
+    for (var k = 0; k < g.runs.length; k++) {
+      if (g.runs[k].dir !== 'v') continue;
+      for (var j = 0; j < g.runs[k].cells.length; j++) if (hs.has(g.runs[k].cells[j])) return g.runs[k].cells[j];
+    }
+    return null;
+  }
+  // Hvilken specialbrik fødes af denne gruppe, og hvor?
+  function pickSpawn(g, prefer) {
+    var longest = g.runs.reduce(function (a, r) { return r.cells.length > a.cells.length ? r : a; }, g.runs[0]);
+    var kind, pos = null;
+    if (longest.cells.length >= 5) kind = 'rainbow';
+    else {
+      var inter = intersection(g);
+      if (inter !== null) {
+        if (board[inter].special) return null;
+        return { idx: inter, kind: 'bomb' };
+      }
+      if (longest.cells.length === 4) kind = longest.dir === 'h' ? 'col' : 'row';
+      else return null;
+    }
+    if (prefer) for (var k = 0; k < prefer.length; k++) {
+      if (longest.cells.indexOf(prefer[k]) >= 0 && !board[prefer[k]].special) { pos = prefer[k]; break; }
+    }
+    if (pos === null) {
+      var cand = longest.cells.filter(function (c) { return !board[c].special; });
+      if (!cand.length) return null;
+      pos = cand[Math.floor(cand.length / 2)];
+    }
+    return { idx: pos, kind: kind };
   }
 
   function swapModel(i, j) {
@@ -308,56 +717,116 @@
     if (a) { a.r = Math.floor(j / SIZE); a.c = j % SIZE; }
     if (b) { b.r = Math.floor(i / SIZE); b.c = i % SIZE; }
   }
-
-  // Findes der overhovedet et lovligt træk? Returnerer [i, j] eller null.
+  function legalSwap(i, j) {
+    if (board[i].special || board[j].special) return true;      // specialbrikker kan altid byttes
+    swapModel(i, j);
+    var ok = findMatches().size > 0;
+    swapModel(i, j);
+    return ok;
+  }
   function findMove() {
-    for (var r = 0; r < SIZE; r++) {
-      for (var c = 0; c < SIZE; c++) {
-        var i = idx(r, c);
-        if (c + 1 < SIZE) {
-          var j = idx(r, c + 1);
-          swapModel(i, j);
-          var ok = findMatches().size > 0;
-          swapModel(i, j);
-          if (ok) return [i, j];
-        }
-        if (r + 1 < SIZE) {
-          var k = idx(r + 1, c);
-          swapModel(i, k);
-          var ok2 = findMatches().size > 0;
-          swapModel(i, k);
-          if (ok2) return [i, k];
-        }
-      }
+    for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
+      var i = idx(r, c);
+      if (c + 1 < SIZE && legalSwap(i, idx(r, c + 1))) return [i, idx(r, c + 1)];
+      if (r + 1 < SIZE && legalSwap(i, idx(r + 1, c))) return [i, idx(r + 1, c)];
     }
     return null;
   }
 
-  // ====================== Opbygning af bræt ======================
-  function fillBoard() {
-    for (var i = 0; i < board.length; i++) { removeTile(board[i]); board[i] = null; }
-    for (var r = 0; r < SIZE; r++) {
-      for (var c = 0; c < SIZE; c++) {
-        var type, guard = 0;
-        do {
-          type = randType();
-          guard++;
-        } while (guard < 30 && createsMatch(r, c, type));
-        board[idx(r, c)] = makeTile(type, r, c);
-      }
-    }
-    if (!findMove()) fillBoard();   // sjældent, men sørg for et spilbart bræt
+  // ====================== Specialbrikkernes effekt ======================
+  function mostCommonType() {
+    var cnt = {}, best_ = -1, bt = 0;
+    board.forEach(function (t) { if (t && t.type >= 0) cnt[t.type] = (cnt[t.type] || 0) + 1; });
+    Object.keys(cnt).forEach(function (k) { if (cnt[k] > best_) { best_ = cnt[k]; bt = +k; } });
+    return bt;
   }
-  // Ville denne type give et match med de allerede udfyldte naboer til venstre/over?
+  function blast(i, t, targets) {
+    var r = Math.floor(i / SIZE), c = i % SIZE, out = [], k, dr, dc;
+    if (t.special === 'row') for (k = 0; k < SIZE; k++) out.push(idx(r, k));
+    else if (t.special === 'col') for (k = 0; k < SIZE; k++) out.push(idx(k, c));
+    else if (t.special === 'bomb') {
+      for (dr = -2; dr <= 2; dr++) for (dc = -2; dc <= 2; dc++) {
+        if (Math.abs(dr) + Math.abs(dc) > 2) continue;
+        var rr = r + dr, cc = c + dc;
+        if (rr >= 0 && cc >= 0 && rr < SIZE && cc < SIZE) out.push(idx(rr, cc));
+      }
+    } else if (t.special === 'rainbow') {
+      var type = targets && targets[t.id] !== undefined ? targets[t.id] : mostCommonType();
+      board.forEach(function (o, j) { if (o && o.type === type) out.push(j); });
+    }
+    return out;
+  }
+  // Udvid ryddemængden med kædereaktioner fra specialbrikker
+  function expand(clear, protect, targets) {
+    var queue = Array.from(clear), done = new Set(), effects = [];
+    while (queue.length) {
+      var i = queue.pop(), t = board[i];
+      if (!t || !t.special || done.has(i)) continue;
+      done.add(i);
+      effects.push({ kind: t.special, r: t.r, c: t.c });
+      blast(i, t, targets).forEach(function (j) {
+        if (protect.has(j) || !board[j]) return;
+        if (!clear.has(j)) { clear.add(j); queue.push(j); }
+      });
+    }
+    return { n: done.size, effects: effects };
+  }
+  // Hvad sker der, når en specialbrik byttes?
+  function specialForce(a, b) {
+    if (!a.special && !b.special) return null;
+    var cells = new Set(), targets = {};
+    var ai = a.r * SIZE + a.c, bi = b.r * SIZE + b.c;
+    if (a.special === 'rainbow' && b.special === 'rainbow') {
+      for (var k = 0; k < board.length; k++) cells.add(k);
+      return { cells: cells, targets: targets };
+    }
+    if (a.special === 'rainbow' || b.special === 'rainbow') {
+      var rb = a.special === 'rainbow' ? a : b, o = rb === a ? b : a;
+      cells.add(rb.r * SIZE + rb.c);
+      if (o.special) {              // regnbue + specialbrik: alle af den slags bliver til samme special
+        board.forEach(function (t) { if (t && t.type === o.type && !t.special) { t.special = o.special; paint(t); } });
+        board.forEach(function (t, j) { if (t && t.type === o.type) cells.add(j); });
+      } else targets[rb.id] = o.type;
+      return { cells: cells, targets: targets };
+    }
+    if (a.special) cells.add(ai);
+    if (b.special) cells.add(bi);
+    return { cells: cells, targets: targets };
+  }
+
+  // ====================== Opbygning af bræt ======================
   function createsMatch(r, c, type) {
     var l1 = c >= 1 && board[idx(r, c - 1)], l2 = c >= 2 && board[idx(r, c - 2)];
     if (l1 && l2 && l1.type === type && l2.type === type) return true;
     var u1 = r >= 1 && board[idx(r - 1, c)], u2 = r >= 2 && board[idx(r - 2, c)];
-    if (u1 && u2 && u1.type === type && u2.type === type) return true;
-    return false;
+    return !!(u1 && u2 && u1.type === type && u2.type === type);
+  }
+  function fillBoard() {
+    for (var i = 0; i < board.length; i++) { removeTile(board[i]); board[i] = null; }
+    for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
+      var type, guard = 0;
+      do { type = randType(); guard++; } while (guard < 30 && createsMatch(r, c, type));
+      board[idx(r, c)] = makeTile(type, r, c);
+    }
+    if (!findMove()) fillBoard();
+  }
+  // Bland de eksisterende brikker (specialbrikker bevares)
+  function shuffleBoard() {
+    var tiles = board.slice(), k, i, j, tmp, ok = false;
+    for (k = 0; k < 300 && !ok; k++) {
+      for (i = tiles.length - 1; i > 0; i--) { j = Math.floor(Math.random() * (i + 1)); tmp = tiles[i]; tiles[i] = tiles[j]; tiles[j] = tmp; }
+      for (i = 0; i < tiles.length; i++) { board[i] = tiles[i]; tiles[i].r = Math.floor(i / SIZE); tiles[i].c = i % SIZE; }
+      ok = findMatches().size === 0 && !!findMove();
+    }
+    for (i = 0; i < board.length; i++) place(board[i], true);
   }
 
-  // ====================== Point og tid ======================
+  // ====================== Point, tid, shuffles ======================
+  function updateShuffleUI() {
+    shufN.textContent = shuffles;
+    shuffleBtn.disabled = shuffles <= 0;
+    shufHint.textContent = shuffles >= SHUFFLE_CAP ? 'MAX SHUFFLES' : '+1 ved ' + nextShuffleAt + ' point';
+  }
   function addScore(n) {
     score += n;
     scoreEl.textContent = score;
@@ -366,55 +835,99 @@
       level = newLevel;
       levelEl.textContent = level;
       timeLeft = Math.min(TIME_MAX, timeLeft + 5);
-      toast('Niveau ' + level + '! Tempoet stiger');
-      beep(880, .18, .07);
+      say('LEVEL ' + level + '! SUGOI!');
+      arp([0, 2, 4, 7], 80);
     }
+    var earned = false;
+    while (score >= nextShuffleAt) {
+      nextShuffleAt += SHUFFLE_EVERY;
+      if (shuffles < SHUFFLE_CAP) { shuffles++; earned = true; }
+    }
+    if (earned) { say('+1 SHUFFLE!'); arp([4, 6, 8], 60); }
+    updateShuffleUI();
   }
   function addTime(s) { timeLeft = Math.min(TIME_MAX, timeLeft + s); }
 
-  function floatText(text, r, c) {
+  function floatText(text, r, c, width) {
     var cs = cell();
     var el = document.createElement('div');
     el.className = 'fx';
     el.textContent = text;
-    el.style.left = (c * cs) + 'px';
-    el.style.top  = (r * cs) + 'px';
-    el.style.width = cs + 'px';
-    el.style.textAlign = 'center';
+    el.style.left = (c * cs - (width || 0)) + 'px';
+    el.style.top = (r * cs) + 'px';
+    el.style.width = (cs + (width || 0) * 2) + 'px';
     boardEl.appendChild(el);
-    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 760);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 820);
   }
+  function showEffect(e) {
+    var cs = cell(), el = document.createElement('div');
+    if (e.kind === 'row') { el.className = 'beam h'; el.style.cssText = 'left:0;top:' + (e.r * cs) + 'px;width:' + (SIZE * cs) + 'px;height:' + cs + 'px'; }
+    else if (e.kind === 'col') { el.className = 'beam v'; el.style.cssText = 'top:0;left:' + (e.c * cs) + 'px;height:' + (SIZE * cs) + 'px;width:' + cs + 'px'; }
+    else {
+      var big = e.kind === 'rainbow' ? 8 : 5;
+      el.className = 'ring';
+      el.style.cssText = 'left:' + ((e.c + .5) * cs) + 'px;top:' + ((e.r + .5) * cs) + 'px;width:' + (big * cs) + 'px;height:' + (big * cs) + 'px';
+    }
+    boardEl.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 520);
+  }
+  function shake() { boardEl.classList.remove('shake'); void boardEl.offsetWidth; boardEl.classList.add('shake'); }
 
-  // ====================== Kaskade: ryd, fald, genopfyld ======================
-  async function resolve() {
-    var combo = 0;
+  // ====================== Kaskade ======================
+  var COMBO_WORDS = ['', '', 'SUGOI!', 'KAWAII!!', 'SUPER KAWAII!', 'BANZAI!!!'];
+  var BORN_WORDS = { row: 'KATANA!', col: 'KATANA!', bomb: 'BAKUDAN!', rainbow: 'NIJI!!' };
+
+  async function resolve(forced, prefer) {
+    var combo = 0, iter = 0;
     while (true) {
-      var hits = findMatches();
-      if (!hits.size) break;
-      combo++;
+      var groups = findGroups();
+      var f = iter === 0 ? forced : null;
+      if (!groups.length && !(f && f.cells.size)) break;
+      iter++; combo++;
 
-      // Pop
-      var first = null;
-      hits.forEach(function (i) {
+      var clear = new Set(), spawns = [], protect = new Set();
+      groups.forEach(function (g) {
+        g.cells.forEach(function (c) { clear.add(c); });
+        var sp = pickSpawn(g, iter === 1 ? prefer : null);
+        if (sp) { spawns.push(sp); protect.add(sp.idx); }
+      });
+      if (f) f.cells.forEach(function (c) { clear.add(c); });
+      protect.forEach(function (c) { clear.delete(c); });
+      var ex = expand(clear, protect, f && f.targets);
+
+      // Visning
+      var firstIdx = null;
+      clear.forEach(function (i) {
         var t = board[i];
         if (!t) return;
-        if (first === null) first = t;
+        if (firstIdx === null) firstIdx = i;
         t.el.classList.add('pop');
       });
-      var gained = Math.round(hits.size * 10 * combo * (1 + (hits.size - 3) * 0.25));
+      ex.effects.forEach(showEffect);
+      spawns.forEach(function (sp) {
+        var t = board[sp.idx];
+        t.special = sp.kind;
+        if (sp.kind === 'rainbow') t.type = -1;
+        paint(t);
+        t.i.classList.add('born');
+        setTimeout(function () { t.i.classList.remove('born'); }, 400);
+        say(BORN_WORDS[sp.kind]);
+      });
+
+      var gained = clear.size * 10 * combo + ex.n * 60 * combo;
       addScore(gained);
-      addTime(hits.size * TIME_PER_TILE * (combo > 1 ? 1.3 : 1));
-      if (first) floatText('+' + gained + (combo > 1 ? ' x' + combo : ''), first.r, first.c);
-      beep(420 + combo * 110, .14, .06);
-      vibrate(combo > 1 ? 24 : 12);
+      addTime(Math.min(8, clear.size * TIME_PER_TILE * (combo > 1 ? 1.3 : 1)));
+      if (firstIdx !== null) floatText('+' + gained + (combo > 1 ? ' x' + combo : ''), Math.floor(firstIdx / SIZE), firstIdx % SIZE, 14);
+      if (combo >= 2 && !spawns.length) say(COMBO_WORDS[Math.min(combo, 5)]);
+      if (ex.n) { shake(); vibrate(40); arp([2, 5, 9, 11], 45); }
+      else { beep(SCALE[Math.min(SCALE.length - 1, combo + 2)], .12, .04); vibrate(combo > 1 ? 24 : 12); }
 
       await sleep(POP_MS);
-      hits.forEach(function (i) { removeTile(board[i]); board[i] = null; });
+      clear.forEach(function (i) { removeTile(board[i]); board[i] = null; });
 
-      // Tyngdekraft pr. kolonne + nye brikker ovenfra
       for (var c = 0; c < SIZE; c++) {
-        var write = SIZE - 1;
-        for (var r = SIZE - 1; r >= 0; r--) {
+        var write = SIZE - 1, r;
+        for (r = SIZE - 1; r >= 0; r--) {
           var t = board[idx(r, c)];
           if (!t) continue;
           if (r !== write) { board[idx(write, c)] = t; board[idx(r, c)] = null; t.r = write; t.c = c; }
@@ -422,22 +935,22 @@
         }
         var spawn = 1;
         for (var r2 = write; r2 >= 0; r2--) {
-          var nt = makeTile(randType(), -spawn, c);  // starter over brættet
+          var nt = makeTile(randType(), -spawn, c);
           spawn++;
           nt.r = r2; nt.c = c;
           board[idx(r2, c)] = nt;
         }
       }
-      void boardEl.offsetWidth;                      // tving reflow før faldet
+      void boardEl.offsetWidth;
       for (var i2 = 0; i2 < board.length; i2++) if (board[i2]) place(board[i2], true);
       await sleep(FALL_MS);
     }
 
-    // Ingen lovlige træk tilbage? Bland brættet.
     if (!findMove()) {
-      toast('Ingen træk – brættet blandes');
+      say('KAWARI! SHUFFLE');
       await sleep(250);
-      fillBoard();
+      shuffleBoard();
+      await sleep(FALL_MS + 60);
       await resolve();
     }
     return combo;
@@ -455,17 +968,33 @@
     place(a, true); place(b, true);
     await sleep(SWAP_MS);
 
-    if (findMatches().size === 0) {                   // ulovligt træk: byt tilbage
+    var forced = specialForce(a, b);
+    if (!forced && findMatches().size === 0) {
       swapModel(i, j);
       place(a, true); place(b, true);
       a.el.classList.add('bad'); b.el.classList.add('bad');
-      beep(170, .1, .05);
-      timeLeft = Math.max(0, timeLeft - 1);           // lille straf
+      beep(150, .12, .05);
+      timeLeft = Math.max(0, timeLeft - 1);
       await sleep(SWAP_MS + 60);
       a.el.classList.remove('bad'); b.el.classList.remove('bad');
     } else {
-      await resolve();
+      await resolve(forced, [i, j]);
     }
+    busy = false;
+  }
+
+  async function doShuffle() {
+    if (busy || !running || shuffles <= 0) return;
+    busy = true;
+    shuffles--;
+    updateShuffleUI();
+    clearSelection(); clearHint();
+    idleSince = performance.now();
+    say('SHUFFLE!');
+    arp([0, 3, 5, 8], 50);
+    shuffleBoard();
+    await sleep(FALL_MS + 80);
+    if (findMatches().size) await resolve();
     busy = false;
   }
 
@@ -474,13 +1003,12 @@
     return Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
   }
 
-  // ====================== Input: swipe og tap ======================
+  // ====================== Input ======================
   var down = null;
   function cellFromEvent(e) {
-    var rect = boardEl.getBoundingClientRect();
-    var cs = cell();
-    var c = Math.floor((e.clientX - rect.left) / cs);
-    var r = Math.floor((e.clientY - rect.top) / cs);
+    var rect = boardEl.getBoundingClientRect(), cs = cell();
+    var c = Math.floor((e.clientX - rect.left - boardEl.clientLeft) / cs);
+    var r = Math.floor((e.clientY - rect.top - boardEl.clientTop) / cs);
     if (r < 0 || c < 0 || r >= SIZE || c >= SIZE) return -1;
     return idx(r, c);
   }
@@ -492,21 +1020,18 @@
     if (selected !== null && board[selected]) board[selected].el.classList.remove('sel');
     selected = null;
   }
-
   boardEl.addEventListener('pointerdown', function (e) {
     if (!running || busy) return;
     var i = cellFromEvent(e);
     if (i < 0) return;
-    boardEl.setPointerCapture(e.pointerId);
+    try { boardEl.setPointerCapture(e.pointerId); } catch (err) {}
     down = { i: i, x: e.clientX, y: e.clientY, moved: false };
     if (selected === null) select(i);
     e.preventDefault();
   });
-
   boardEl.addEventListener('pointermove', function (e) {
     if (!down || down.moved || busy) return;
-    var dx = e.clientX - down.x, dy = e.clientY - down.y;
-    var thresh = cell() * 0.45;
+    var dx = e.clientX - down.x, dy = e.clientY - down.y, thresh = cell() * 0.45;
     if (Math.abs(dx) < thresh && Math.abs(dy) < thresh) return;
     down.moved = true;
     var r = Math.floor(down.i / SIZE), c = down.i % SIZE;
@@ -515,26 +1040,19 @@
     if (r >= 0 && c >= 0 && r < SIZE && c < SIZE) trySwap(down.i, idx(r, c));
     down = null;
   });
-
-  function endPointer(e) {
+  boardEl.addEventListener('pointerup', function (e) {
     if (!down) return;
     var i = cellFromEvent(e);
-    // Tap: første tap vælger, andet tap på en nabo bytter.
     if (!down.moved) {
       if (selected !== null && selected !== i && i >= 0 && neighbors(selected, i)) {
         var from = selected; clearSelection(); trySwap(from, i);
-      } else if (selected === i) {
-        // samme felt valgt – behold markeringen
-      } else {
-        select(i);
-      }
+      } else if (selected !== i) select(i);
     }
     down = null;
-  }
-  boardEl.addEventListener('pointerup', endPointer);
+  });
   boardEl.addEventListener('pointercancel', function () { down = null; });
 
-  // ====================== Hint efter inaktivitet ======================
+  // ====================== Hint ======================
   function clearHint() {
     hintTiles.forEach(function (t) { if (t && t.el) t.el.classList.remove('hint'); });
     hintTiles = [];
@@ -547,22 +1065,20 @@
     hintTiles.forEach(function (t) { if (t && t.el) t.el.classList.add('hint'); });
   }
 
-  // ====================== Spil-loop (tid) ======================
+  // ====================== Loop ======================
   function loop(now) {
     requestAnimationFrame(loop);
     if (!running) return;
     if (!lastTick) lastTick = now;
-    var dt = Math.min(0.25, (now - lastTick) / 1000);  // kap spring efter baggrundspause
+    var dt = Math.min(0.25, (now - lastTick) / 1000);
     lastTick = now;
-
     if (!busy) {
-      timeLeft -= dt * (1 + (level - 1) * 0.09);        // hurtigere dræn pr. niveau
+      timeLeft -= dt * (1 + (level - 1) * 0.09);
       if (now - idleSince > 5000) showHint();
     }
     if (timeLeft <= 0) { timeLeft = 0; gameOver(); }
-
     var frac = timeLeft / TIME_MAX;
-    fillEl.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+    fillEl.style.width = (frac * 100).toFixed(1) + '%';
     timerEl.classList.toggle('low', frac < 0.25);
   }
   requestAnimationFrame(loop);
@@ -570,7 +1086,9 @@
   // ====================== Start / slut ======================
   function startGame() {
     score = 0; level = 1; timeLeft = TIME_START;
+    shuffles = SHUFFLE_START; nextShuffleAt = SHUFFLE_EVERY;
     scoreEl.textContent = '0'; levelEl.textContent = '1';
+    updateShuffleUI();
     clearSelection(); clearHint();
     busy = false;
     fillBoard();
@@ -579,9 +1097,9 @@
     running = true;
     lastTick = 0;
     idleSince = performance.now();
-    beep(660, .12, .05);
+    say('HAJIME! START!');
+    arp([0, 2, 4], 70);
   }
-
   function gameOver() {
     running = false;
     clearSelection(); clearHint();
@@ -590,59 +1108,81 @@
       bestEl.textContent = best;
       try { localStorage.setItem('harbuzoo.best', String(best)); } catch (e) {}
     }
-    ovTitle.textContent = 'Tiden er gået';
+    ovTitle.innerHTML = 'OWARI!';
+    ovJp.textContent = '終わり';
     ovScore.hidden = false;
     ovScore.textContent = score;
-    ovText.innerHTML = 'Niveau ' + level + ' &middot; Rekord ' + best + '<br>Match fire eller flere for ekstra tid og point.';
-    playBtn.textContent = 'Spil igen';
+    ovText.innerHTML = '<p style="text-align:center">LEVEL ' + level + ' &middot; REKORD ' + best + '</p>';
+    playBtn.textContent = 'IGEN!';
     overlay.hidden = false;
-    beep(220, .35, .07);
+    say('OWARI...');
+    arp([7, 5, 3, 0], 110);
     vibrate([20, 60, 20]);
   }
 
-  var toastTimer = null;
-  function toast(msg) {
-    toastEl.textContent = msg;
-    toastEl.classList.add('on');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 1600);
+  // Tap-hjælper: virker med både pointer og klik (nogle previews sluger det ene)
+  function onTap(el, fn) {
+    var last = 0;
+    function h(e) {
+      var n = Date.now();
+      if (n - last < 450) return;
+      last = n;
+      fn(e);
+    }
+    el.addEventListener('click', h);
+    el.addEventListener('pointerup', h);
   }
-
-  // ====================== Knapper og vinduesevents ======================
-  playBtn.addEventListener('click', startGame);
-  document.getElementById('restartBtn').addEventListener('click', function () {
-    if (running && score > 0 && !confirm('Start forfra?')) return;
-    startGame();
+  onTap(playBtn, startGame);
+  onTap(shuffleBtn, doShuffle);
+  var armed = false, armT = null;
+  onTap($('restartBtn'), function () {
+    if (running && score > 0 && !armed) {          // to tryk for at undgå uheld (confirm() virker ikke i alle previews)
+      armed = true; say('TRYK IGEN FOR NYT SPIL');
+      clearTimeout(armT); armT = setTimeout(function () { armed = false; }, 2200);
+      return;
+    }
+    armed = false; startGame();
   });
-  soundBtn.addEventListener('click', function () {
+  onTap(soundBtn, function () {
     soundOn = !soundOn;
     soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
     try { localStorage.setItem('harbuzoo.sound', soundOn ? 'on' : 'off'); } catch (e) {}
     if (soundOn) beep(760, .1, .05);
   });
 
-  window.addEventListener('resize', layout);
-  window.addEventListener('orientationchange', function () { setTimeout(layout, 150); });
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { lastTick = 0; }      // undgå tidstab mens fanen er væk
-    else { lastTick = 0; idleSince = performance.now(); }
-  });
-  // Stop iOS' gummibånd og dobbelt-tap-zoom på selve brættet
+  window.addEventListener('resize', function () { drawBg(); layout(); });
+  window.addEventListener('orientationchange', function () { setTimeout(function () { drawBg(); layout(); }, 150); });
+  document.addEventListener('visibilitychange', function () { lastTick = 0; idleSince = performance.now(); });
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
   boardEl.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
 
-  // Service worker (valgfri – findes i roden af HarbuPlayer)
   try {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         try { navigator.serviceWorker.register('./sw.js').catch(function () {}); } catch (e) {}
       });
     }
-  } catch (e) {}   // sandboxed preview: service workers er ikke tilladt
+  } catch (e) {}
 
-  // Vis et stille demobræt bag startoverlayet
+  // ====================== Init ======================
+  drawBg();
+  makePetals();
+  spriteCanvas(SPRITES[1], 1, mascot);
+  spriteCanvas(SPRITES[1], 6, $('bigMascot'));
+  updateShuffleUI();
   fillBoard();
   layout();
+  setTimeout(layout, 300);   // efter skrifttype/layout har sat sig
+
+  if (/[?&]debug/.test(location.search)) {
+    window.__zoo = {
+      board: function () { return board; },
+      setType: function (i, type) { var t = board[i]; t.type = type; t.special = null; paint(t); },
+      swap: function (i, j) { return trySwap(i, j); },
+      setSpecial: function (i, kind) { var t = board[i]; t.special = kind; if (kind === 'rainbow') t.type = -1; paint(t); },
+      state: function () { return { score: score, level: level, shuffles: shuffles, busy: busy, running: running }; }
+    };
+  }
 })();
 </script>
 </body>

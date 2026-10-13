@@ -36,12 +36,14 @@ This project is designed as a personal music player experiment, focused on keepi
 
 HarbuZoo (spil)
 
-zookeeper.html is a small modern match-3 animal game in the same single file style as the player. Open /zookeeper.html on a phone and play directly in the browser.
+zookeeper.html is a small pixel-art match-3 animal game in wacky Japan style (maneki-neko, tanuki, kitsune, panda, kappa, tako and hiyoko), written in the same single file style as the player. Open /zookeeper.html on a phone and play directly in the browser.
 
 * Swipe or tap two neighbouring animals to swap them
-* Three or more in a row clears them, gives points and adds time
-* Cascades give a combo multiplier, 4+ in a row gives bonus points
-* Time bar drains faster for every level
+* 3 in a row clears them, gives points and adds time, cascades give a combo multiplier
+* 4 in a row creates a KATANA that clears a whole row or column
+* L or T shapes create a BAKUDAN that blows up an area
+* 5 in a row creates a NIJI (rainbow). Swap it with an animal to clear every animal of that kind
+* Special pieces can be swapped with any neighbour and chain into each other
+* Limited SHUFFLE button, you start with 2 and earn +1 for every 1000 points (max 9)
 * Auto shuffle when no moves are left, hint after a few seconds idle
-* Best score stored locally, sound can be toggled off
-* Mobile first, safe area aware, no zoom or scroll bounce on iOS
+* Chiptune sound, best score stored locally, mobile first with safe area handling
