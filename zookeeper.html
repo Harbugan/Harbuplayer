@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<title>HarbuZoo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f1020">
+<meta name="description" content="HarbuZoo - et lille moderne match-3 dyrespil til mobilen.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HarbuZoo">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230f1020'/%3E%3Ctext x='90' y='126' font-size='96' text-anchor='middle'%3E%F0%9F%A6%81%3C/text%3E%3C/svg%3E">
+<style>
+  /* ---------- Grundlayout ---------- */
+  :root {
+    --bg: #0f1020;
+    --bg2: #171a33;
+    --panel: rgba(255,255,255,.06);
+    --panel-line: rgba(255,255,255,.10);
+    --text: #f2f3ff;
+    --muted: #a4a8c8;
+    --accent: #58e1c0;
+    --warn: #ff6b7a;
+    --cs: 40px;          /* cellestørrelse, sættes af JS */
+    --gap: 3px;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    overflow: hidden;                /* ingen scroll-bounce på iOS */
+    overscroll-behavior: none;
+    touch-action: manipulation;      /* ingen dobbelt-tap zoom */
+    background: var(--bg);
+    color: var(--text);
+    font: 500 16px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  body {
+    background:
+      radial-gradient(120% 80% at 50% -10%, #272c5a 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    display: flex; flex-direction: column; align-items: center;
+    padding: calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 8px);
+  }
+
+  /* ---------- Topbar ---------- */
+  header { width: 100%; max-width: 440px; display: flex; align-items: center; gap: 10px; }
+  .brand { font-size: 17px; font-weight: 800; letter-spacing: .3px; }
+  .brand span { color: var(--accent); }
+  .spacer { flex: 1; }
+  .iconbtn {
+    width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--panel-line);
+    background: var(--panel); color: var(--text); font-size: 17px; line-height: 1;
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .iconbtn:active { transform: scale(.94); }
+  .iconbtn[aria-pressed="false"] { opacity: .45; }
+
+  /* ---------- Statusfelter ---------- */
+  .stats { width: 100%; max-width: 440px; display: flex; gap: 8px; margin: 10px 0 8px; }
+  .stat {
+    flex: 1; background: var(--panel); border: 1px solid var(--panel-line);
+    border-radius: var(--radius); padding: 7px 10px; text-align: center;
+  }
+  .stat b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; }
+  .stat i { font-style: normal; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+  /* ---------- Tidslinje ---------- */
+  .timer { width: 100%; max-width: 440px; height: 9px; border-radius: 99px; background: var(--panel); overflow: hidden; }
+  .timer > div {
+    height: 100%; width: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), #7aa7ff);
+    transform-origin: left center;
+  }
+  .timer.low > div { background: linear-gradient(90deg, var(--warn), #ffa36b); }
+
+  /* ---------- Brættet ---------- */
+  .board-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+  #board {
+    position: relative;
+    width: calc(var(--cs) * 8); height: calc(var(--cs) * 8);
+    background: rgba(0,0,0,.22);
+    border: 1px solid var(--panel-line);
+    border-radius: 18px;
+    touch-action: none;              /* vi styrer selv swipes */
+  }
+  .tile {
+    position: absolute; top: 0; left: 0;
+    width: var(--cs); height: var(--cs);
+    display: grid; place-items: center;
+    font-size: calc(var(--cs) * .62);
+    will-change: transform;
+    transition: transform .17s cubic-bezier(.3,.9,.4,1);
+  }
+  .tile > i {
+    font-style: normal;
+    width: calc(var(--cs) - var(--gap) * 2); height: calc(var(--cs) - var(--gap) * 2);
+    display: grid; place-items: center;
+    border-radius: 12px;
+    background: rgba(255,255,255,.055);
+    transition: transform .15s ease, opacity .18s ease, background .15s ease;
+  }
+  .tile.sel > i { background: rgba(88,225,192,.26); transform: scale(1.08); }
+  .tile.hint > i { animation: hint .7s ease-in-out infinite; }
+  .tile.pop > i { transform: scale(.2) rotate(18deg); opacity: 0; }
+  .tile.bad { animation: shake .26s ease; }
+  @keyframes hint { 50% { transform: scale(1.12); background: rgba(255,255,255,.2); } }
+  @keyframes shake { 25% { margin-left: -4px; } 75% { margin-left: 4px; } }
+
+  /* Flydende point ved et match */
+  .fx {
+    position: absolute; pointer-events: none; font-size: 14px; font-weight: 800;
+    color: var(--accent); text-shadow: 0 2px 8px rgba(0,0,0,.6);
+    animation: fx .75s ease-out forwards;
+  }
+  @keyframes fx { to { transform: translateY(-34px); opacity: 0; } }
+
+  /* ---------- Overlay ---------- */
+  #overlay {
+    position: fixed; inset: 0; z-index: 10;
+    display: grid; place-items: center; padding: 24px;
+    background: rgba(8,9,20,.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  #overlay[hidden] { display: none; }
+  .card {
+    width: 100%; max-width: 340px; text-align: center;
+    background: linear-gradient(180deg, #1d2142, #15172e);
+    border: 1px solid var(--panel-line); border-radius: 22px; padding: 24px 20px;
+  }
+  .card h1 { margin: 0 0 6px; font-size: 26px; }
+  .card p { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .big { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  button.play {
+    width: 100%; padding: 14px; font-size: 17px; font-weight: 800; color: #06241e;
+    background: linear-gradient(180deg, #6ff0cf, var(--accent));
+    border: 0; border-radius: 14px; cursor: pointer;
+  }
+  button.play:active { transform: scale(.98); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 18px);
+    transform: translateX(-50%); z-index: 9;
+    background: rgba(20,22,45,.95); border: 1px solid var(--panel-line);
+    padding: 9px 15px; border-radius: 99px; font-size: 13px; opacity: 0;
+    transition: opacity .25s ease; pointer-events: none;
+  }
+  .toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Harbu<span>Zoo</span></div>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="soundBtn" aria-pressed="true" title="Lyd">&#128266;</button>
+  <button class="iconbtn" id="restartBtn" title="Nyt spil">&#8635;</button>
+</header>
+
+<div class="stats">
+  <div class="stat"><b id="score">0</b><i>Point</i></div>
+  <div class="stat"><b id="level">1</b><i>Niveau</i></div>
+  <div class="stat"><b id="best">0</b><i>Rekord</i></div>
+</div>
+
+<div class="timer" id="timer"><div id="timerFill"></div></div>
+
+<div class="board-wrap"><div id="board"></div></div>
+
+<div class="toast" id="toast"></div>
+
+<div id="overlay">
+  <div class="card">
+    <h1 id="ovTitle">HarbuZoo</h1>
+    <div class="big" id="ovScore" hidden>0</div>
+    <p id="ovText">Byt to dyr, der st&oslash;der op til hinanden, og saml tre eller flere p&aring; stribe. Hvert match giver point og mere tid.</p>
+    <button class="play" id="playBtn">Start spillet</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ====================== Konstanter ======================
+  var SIZE   = 8;                                   // 8x8 bræt
+  var ANIMALS = ['🦁','🐵','🐼','🐸','🐧','🐨','🦊']; // sidste dyr låses op på højere niveauer
+  var TIME_MAX    = 60;      // sekunder på fuld bar
+  var TIME_START  = 42;
+  var TIME_PER_TILE = 0.55;  // tid pr. ryddet brik
+  var LEVEL_STEP  = 1200;    // point pr. niveau
+  var SWAP_MS = 170, POP_MS = 190, FALL_MS = 200;
+
+  // ====================== DOM ======================
+  var boardEl  = document.getElementById('board');
+  var scoreEl  = document.getElementById('score');
+  var levelEl  = document.getElementById('level');
+  var bestEl   = document.getElementById('best');
+  var timerEl  = document.getElementById('timer');
+  var fillEl   = document.getElementById('timerFill');
+  var overlay  = document.getElementById('overlay');
+  var ovTitle  = document.getElementById('ovTitle');
+  var ovText   = document.getElementById('ovText');
+  var ovScore  = document.getElementById('ovScore');
+  var playBtn  = document.getElementById('playBtn');
+  var toastEl  = document.getElementById('toast');
+  var soundBtn = document.getElementById('soundBtn');
+
+  // ====================== Tilstand ======================
+  var board = new Array(SIZE * SIZE).fill(null); // brikobjekter
+  var score = 0, level = 1, timeLeft = TIME_START;
+  var running = false, busy = false;              // busy = animation i gang
+  var selected = null, uid = 0;
+  var lastTick = 0, idleSince = 0, hintTiles = [];
+  var best = 0;
+  try { best = parseInt(localStorage.getItem('harbuzoo.best') || '0', 10) || 0; } catch (e) {}
+  bestEl.textContent = best;
+
+  var soundOn = true;
+  try { soundOn = localStorage.getItem('harbuzoo.sound') !== 'off'; } catch (e) {}
+  soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+
+  function idx(r, c) { return r * SIZE + c; }
+  function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+  function typeCount() { return Math.min(ANIMALS.length, 6 + Math.floor((level - 1) / 4)); }
+  function randType() { return Math.floor(Math.random() * typeCount()); }
+
+  // ====================== Lyd (små WebAudio-blip) ======================
+  var actx = null;
+  function beep(freq, dur, vol) {
+    if (!soundOn) return;
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'triangle';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0, actx.currentTime);
+      g.gain.linearRampToValueAtTime(vol || 0.06, actx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + (dur || 0.12));
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + (dur || 0.12) + 0.02);
+    } catch (e) {}
+  }
+  function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
+
+  // ====================== Responsiv cellestørrelse ======================
+  function layout() {
+    var chromeH = 210;                                   // topbar + stats + timer + luft
+    var availH  = window.innerHeight - chromeH;
+    var availW  = Math.min(window.innerWidth - 24, 440);
+    var cs = Math.floor(Math.min(availW, availH) / SIZE);
+    cs = Math.max(30, Math.min(cs, 64));
+    document.documentElement.style.setProperty('--cs', cs + 'px');
+    for (var i = 0; i < board.length; i++) if (board[i]) place(board[i], false);
+  }
+  function cell() { return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cs')); }
+
+  // ====================== Brikker ======================
+  function place(t, animate) {
+    var cs = cell();
+    if (!animate) t.el.style.transition = 'none';
+    t.el.style.transform = 'translate3d(' + (t.c * cs) + 'px,' + (t.r * cs) + 'px,0)';
+    if (!animate) { void t.el.offsetWidth; t.el.style.transition = ''; }
+  }
+  function makeTile(type, r, c) {
+    var el = document.createElement('div');
+    el.className = 'tile';
+    el.innerHTML = '<i>' + ANIMALS[type] + '</i>';
+    var t = { id: ++uid, type: type, r: r, c: c, el: el };
+    boardEl.appendChild(el);
+    place(t, false);
+    return t;
+  }
+  function removeTile(t) { if (t && t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el); }
+
+  // ====================== Matchlogik ======================
+  function findMatches() {
+    var hits = new Set();
+    var r, c, run, i;
+    for (r = 0; r < SIZE; r++) {                       // vandrette striber
+      run = 1;
+      for (c = 1; c <= SIZE; c++) {
+        var a = c < SIZE ? board[idx(r, c)] : null;
+        var b = board[idx(r, c - 1)];
+        if (a && b && a.type === b.type) { run++; continue; }
+        if (run >= 3) for (i = c - run; i < c; i++) hits.add(idx(r, i));
+        run = 1;
+      }
+    }
+    for (c = 0; c < SIZE; c++) {                       // lodrette striber
+      run = 1;
+      for (r = 1; r <= SIZE; r++) {
+        var a2 = r < SIZE ? board[idx(r, c)] : null;
+        var b2 = board[idx(r - 1, c)];
+        if (a2 && b2 && a2.type === b2.type) { run++; continue; }
+        if (run >= 3) for (i = r - run; i < r; i++) hits.add(idx(i, c));
+        run = 1;
+      }
+    }
+    return hits;
+  }
+
+  function swapModel(i, j) {
+    var a = board[i], b = board[j];
+    board[i] = b; board[j] = a;
+    if (a) { a.r = Math.floor(j / SIZE); a.c = j % SIZE; }
+    if (b) { b.r = Math.floor(i / SIZE); b.c = i % SIZE; }
+  }
+
+  // Findes der overhovedet et lovligt træk? Returnerer [i, j] eller null.
+  function findMove() {
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var i = idx(r, c);
+        if (c + 1 < SIZE) {
+          var j = idx(r, c + 1);
+          swapModel(i, j);
+          var ok = findMatches().size > 0;
+          swapModel(i, j);
+          if (ok) return [i, j];
+        }
+        if (r + 1 < SIZE) {
+          var k = idx(r + 1, c);
+          swapModel(i, k);
+          var ok2 = findMatches().size > 0;
+          swapModel(i, k);
+          if (ok2) return [i, k];
+        }
+      }
+    }
+    return null;
+  }
+
+  // ====================== Opbygning af bræt ======================
+  function fillBoard() {
+    for (var i = 0; i < board.length; i++) { removeTile(board[i]); board[i] = null; }
+    for (var r = 0; r < SIZE; r++) {
+      for (var c = 0; c < SIZE; c++) {
+        var type, guard = 0;
+        do {
+          type = randType();
+          guard++;
+        } while (guard < 30 && createsMatch(r, c, type));
+        board[idx(r, c)] = makeTile(type, r, c);
+      }
+    }
+    if (!findMove()) fillBoard();   // sjældent, men sørg for et spilbart bræt
+  }
+  // Ville denne type give et match med de allerede udfyldte naboer til venstre/over?
+  function createsMatch(r, c, type) {
+    var l1 = c >= 1 && board[idx(r, c - 1)], l2 = c >= 2 && board[idx(r, c - 2)];
+    if (l1 && l2 && l1.type === type && l2.type === type) return true;
+    var u1 = r >= 1 && board[idx(r - 1, c)], u2 = r >= 2 && board[idx(r - 2, c)];
+    if (u1 && u2 && u1.type === type && u2.type === type) return true;
+    return false;
+  }
+
+  // ====================== Point og tid ======================
+  function addScore(n) {
+    score += n;
+    scoreEl.textContent = score;
+    var newLevel = 1 + Math.floor(score / LEVEL_STEP);
+    if (newLevel > level) {
+      level = newLevel;
+      levelEl.textContent = level;
+      timeLeft = Math.min(TIME_MAX, timeLeft + 5);
+      toast('Niveau ' + level + '! Tempoet stiger');
+      beep(880, .18, .07);
+    }
+  }
+  function addTime(s) { timeLeft = Math.min(TIME_MAX, timeLeft + s); }
+
+  function floatText(text, r, c) {
+    var cs = cell();
+    var el = document.createElement('div');
+    el.className = 'fx';
+    el.textContent = text;
+    el.style.left = (c * cs) + 'px';
+    el.style.top  = (r * cs) + 'px';
+    el.style.width = cs + 'px';
+    el.style.textAlign = 'center';
+    boardEl.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 760);
+  }
+
+  // ====================== Kaskade: ryd, fald, genopfyld ======================
+  async function resolve() {
+    var combo = 0;
+    while (true) {
+      var hits = findMatches();
+      if (!hits.size) break;
+      combo++;
+
+      // Pop
+      var first = null;
+      hits.forEach(function (i) {
+        var t = board[i];
+        if (!t) return;
+        if (first === null) first = t;
+        t.el.classList.add('pop');
+      });
+      var gained = Math.round(hits.size * 10 * combo * (1 + (hits.size - 3) * 0.25));
+      addScore(gained);
+      addTime(hits.size * TIME_PER_TILE * (combo > 1 ? 1.3 : 1));
+      if (first) floatText('+' + gained + (combo > 1 ? ' x' + combo : ''), first.r, first.c);
+      beep(420 + combo * 110, .14, .06);
+      vibrate(combo > 1 ? 24 : 12);
+
+      await sleep(POP_MS);
+      hits.forEach(function (i) { removeTile(board[i]); board[i] = null; });
+
+      // Tyngdekraft pr. kolonne + nye brikker ovenfra
+      for (var c = 0; c < SIZE; c++) {
+        var write = SIZE - 1;
+        for (var r = SIZE - 1; r >= 0; r--) {
+          var t = board[idx(r, c)];
+          if (!t) continue;
+          if (r !== write) { board[idx(write, c)] = t; board[idx(r, c)] = null; t.r = write; t.c = c; }
+          write--;
+        }
+        var spawn = 1;
+        for (var r2 = write; r2 >= 0; r2--) {
+          var nt = makeTile(randType(), -spawn, c);  // starter over brættet
+          spawn++;
+          nt.r = r2; nt.c = c;
+          board[idx(r2, c)] = nt;
+        }
+      }
+      void boardEl.offsetWidth;                      // tving reflow før faldet
+      for (var i2 = 0; i2 < board.length; i2++) if (board[i2]) place(board[i2], true);
+      await sleep(FALL_MS);
+    }
+
+    // Ingen lovlige træk tilbage? Bland brættet.
+    if (!findMove()) {
+      toast('Ingen træk – brættet blandes');
+      await sleep(250);
+      fillBoard();
+      await resolve();
+    }
+    return combo;
+  }
+
+  // ====================== Træk ======================
+  async function trySwap(i, j) {
+    if (busy || !running) return;
+    busy = true;
+    clearHint();
+    idleSince = performance.now();
+
+    var a = board[i], b = board[j];
+    swapModel(i, j);
+    place(a, true); place(b, true);
+    await sleep(SWAP_MS);
+
+    if (findMatches().size === 0) {                   // ulovligt træk: byt tilbage
+      swapModel(i, j);
+      place(a, true); place(b, true);
+      a.el.classList.add('bad'); b.el.classList.add('bad');
+      beep(170, .1, .05);
+      timeLeft = Math.max(0, timeLeft - 1);           // lille straf
+      await sleep(SWAP_MS + 60);
+      a.el.classList.remove('bad'); b.el.classList.remove('bad');
+    } else {
+      await resolve();
+    }
+    busy = false;
+  }
+
+  function neighbors(i, j) {
+    var r1 = Math.floor(i / SIZE), c1 = i % SIZE, r2 = Math.floor(j / SIZE), c2 = j % SIZE;
+    return Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+  }
+
+  // ====================== Input: swipe og tap ======================
+  var down = null;
+  function cellFromEvent(e) {
+    var rect = boardEl.getBoundingClientRect();
+    var cs = cell();
+    var c = Math.floor((e.clientX - rect.left) / cs);
+    var r = Math.floor((e.clientY - rect.top) / cs);
+    if (r < 0 || c < 0 || r >= SIZE || c >= SIZE) return -1;
+    return idx(r, c);
+  }
+  function select(i) {
+    clearSelection();
+    if (i >= 0 && board[i]) { selected = i; board[i].el.classList.add('sel'); }
+  }
+  function clearSelection() {
+    if (selected !== null && board[selected]) board[selected].el.classList.remove('sel');
+    selected = null;
+  }
+
+  boardEl.addEventListener('pointerdown', function (e) {
+    if (!running || busy) return;
+    var i = cellFromEvent(e);
+    if (i < 0) return;
+    boardEl.setPointerCapture(e.pointerId);
+    down = { i: i, x: e.clientX, y: e.clientY, moved: false };
+    if (selected === null) select(i);
+    e.preventDefault();
+  });
+
+  boardEl.addEventListener('pointermove', function (e) {
+    if (!down || down.moved || busy) return;
+    var dx = e.clientX - down.x, dy = e.clientY - down.y;
+    var thresh = cell() * 0.45;
+    if (Math.abs(dx) < thresh && Math.abs(dy) < thresh) return;
+    down.moved = true;
+    var r = Math.floor(down.i / SIZE), c = down.i % SIZE;
+    if (Math.abs(dx) > Math.abs(dy)) c += dx > 0 ? 1 : -1; else r += dy > 0 ? 1 : -1;
+    clearSelection();
+    if (r >= 0 && c >= 0 && r < SIZE && c < SIZE) trySwap(down.i, idx(r, c));
+    down = null;
+  });
+
+  function endPointer(e) {
+    if (!down) return;
+    var i = cellFromEvent(e);
+    // Tap: første tap vælger, andet tap på en nabo bytter.
+    if (!down.moved) {
+      if (selected !== null && selected !== i && i >= 0 && neighbors(selected, i)) {
+        var from = selected; clearSelection(); trySwap(from, i);
+      } else if (selected === i) {
+        // samme felt valgt – behold markeringen
+      } else {
+        select(i);
+      }
+    }
+    down = null;
+  }
+  boardEl.addEventListener('pointerup', endPointer);
+  boardEl.addEventListener('pointercancel', function () { down = null; });
+
+  // ====================== Hint efter inaktivitet ======================
+  function clearHint() {
+    hintTiles.forEach(function (t) { if (t && t.el) t.el.classList.remove('hint'); });
+    hintTiles = [];
+  }
+  function showHint() {
+    if (hintTiles.length || busy) return;
+    var mv = findMove();
+    if (!mv) return;
+    hintTiles = [board[mv[0]], board[mv[1]]];
+    hintTiles.forEach(function (t) { if (t && t.el) t.el.classList.add('hint'); });
+  }
+
+  // ====================== Spil-loop (tid) ======================
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (!running) return;
+    if (!lastTick) lastTick = now;
+    var dt = Math.min(0.25, (now - lastTick) / 1000);  // kap spring efter baggrundspause
+    lastTick = now;
+
+    if (!busy) {
+      timeLeft -= dt * (1 + (level - 1) * 0.09);        // hurtigere dræn pr. niveau
+      if (now - idleSince > 5000) showHint();
+    }
+    if (timeLeft <= 0) { timeLeft = 0; gameOver(); }
+
+    var frac = timeLeft / TIME_MAX;
+    fillEl.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+    timerEl.classList.toggle('low', frac < 0.25);
+  }
+  requestAnimationFrame(loop);
+
+  // ====================== Start / slut ======================
+  function startGame() {
+    score = 0; level = 1; timeLeft = TIME_START;
+    scoreEl.textContent = '0'; levelEl.textContent = '1';
+    clearSelection(); clearHint();
+    busy = false;
+    fillBoard();
+    layout();
+    overlay.hidden = true;
+    running = true;
+    lastTick = 0;
+    idleSince = performance.now();
+    beep(660, .12, .05);
+  }
+
+  function gameOver() {
+    running = false;
+    clearSelection(); clearHint();
+    if (score > best) {
+      best = score;
+      bestEl.textContent = best;
+      try { localStorage.setItem('harbuzoo.best', String(best)); } catch (e) {}
+    }
+    ovTitle.textContent = 'Tiden er gået';
+    ovScore.hidden = false;
+    ovScore.textContent = score;
+    ovText.innerHTML = 'Niveau ' + level + ' &middot; Rekord ' + best + '<br>Match fire eller flere for ekstra tid og point.';
+    playBtn.textContent = 'Spil igen';
+    overlay.hidden = false;
+    beep(220, .35, .07);
+    vibrate([20, 60, 20]);
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 1600);
+  }
+
+  // ====================== Knapper og vinduesevents ======================
+  playBtn.addEventListener('click', startGame);
+  document.getElementById('restartBtn').addEventListener('click', function () {
+    if (running && score > 0 && !confirm('Start forfra?')) return;
+    startGame();
+  });
+  soundBtn.addEventListener('click', function () {
+    soundOn = !soundOn;
+    soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    try { localStorage.setItem('harbuzoo.sound', soundOn ? 'on' : 'off'); } catch (e) {}
+    if (soundOn) beep(760, .1, .05);
+  });
+
+  window.addEventListener('resize', layout);
+  window.addEventListener('orientationchange', function () { setTimeout(layout, 150); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { lastTick = 0; }      // undgå tidstab mens fanen er væk
+    else { lastTick = 0; idleSince = performance.now(); }
+  });
+  // Stop iOS' gummibånd og dobbelt-tap-zoom på selve brættet
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  boardEl.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+
+  // Service worker (valgfri – findes i roden af HarbuPlayer)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
+    });
+  }
+
+  // Vis et stille demobræt bag startoverlayet
+  fillBoard();
+  layout();
+})();
+</script>
+</body>
+</html>

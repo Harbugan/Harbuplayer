@@ -33,3 +33,15 @@ HarbuPlayer is built as a single HTML file using vanilla JavaScript, CSS and bro
 Notes
 
 This project is designed as a personal music player experiment, focused on keeping things simple, fast and device local. No accounts, no streaming service, no unnecessary backend. Just your music, stored and played from your own device.
+
+HarbuZoo (spil)
+
+zookeeper.html is a small modern match-3 animal game in the same single file style as the player. Open /zookeeper.html on a phone and play directly in the browser.
+
+* Swipe or tap two neighbouring animals to swap them
+* Three or more in a row clears them, gives points and adds time
+* Cascades give a combo multiplier, 4+ in a row gives bonus points
+* Time bar drains faster for every level
+* Auto shuffle when no moves are left, hint after a few seconds idle
+* Best score stored locally, sound can be toggled off
+* Mobile first, safe area aware, no zoom or scroll bounce on iOS
