@@ -5,7 +5,7 @@
 <title>HarbuZoo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#120a2e">
-<meta name="description" content="HarbuZoo - pixelart match-3 dyrespil med baner, bjergvej og bonusbaner.">
+<meta name="description" content="HarbuZoo - pixelart match-3 dyrespil med uendelig sti, forhindringer og chiptune-musik.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -36,16 +36,17 @@
   .mascot { width: 40px; height: 40px; image-rendering: pixelated; flex: none; }
   .mascot.hop { animation: hop .35s steps(4); }
   @keyframes hop { 40% { transform: translateY(-8px) rotate(-6deg); } 100% { transform: none; } }
+  .hd { flex: 1; min-width: 0; }
   .brand { font-size: 14px; text-shadow: 2px 2px 0 var(--ink); letter-spacing: 1px; white-space: nowrap; }
   .brand span { color: var(--red); }
-  .bubble { margin-top: 4px; display: inline-block; max-width: 180px; background: var(--cream); color: var(--ink);
+  .bubble { margin-top: 4px; display: block; width: fit-content; max-width: 100%; background: var(--cream); color: var(--ink);
     font-size: 7px; padding: 4px 6px; border: 2px solid var(--ink); box-shadow: 2px 2px 0 rgba(0,0,0,.5);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .spacer { flex: 1; }
   .pbtn { font-family: var(--font); color: var(--cream); cursor: pointer; background: var(--panel2);
     border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), 0 4px 0 var(--ink); }
   .pbtn:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), 0 1px 0 var(--ink); }
-  .pbtn.sq { width: 38px; height: 38px; font-size: 13px; padding: 0; line-height: 1; }
+  .pbtn.sq { width: 38px; height: 38px; font-size: 13px; padding: 0; line-height: 1; flex: none; }
+  .pbtn.sq.txt { font-size: 7px; }
   .pbtn[aria-pressed="false"] { opacity: .5; }
 
   .screen { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -145,10 +146,17 @@
   #shuffleBtn:disabled { filter: grayscale(1); opacity: .5; }
   .small { font-size: 7px; text-shadow: 1px 1px 0 var(--ink); line-height: 1.7; }
 
-  /* ---------- Bonusbane ---------- */
-  #bonusWrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
-  #bonusCanvas { image-rendering: pixelated; touch-action: none; border: 4px solid var(--cyan);
-    box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px var(--ink); background: #0a0620; }
+  /* ---------- Forhindringer ---------- */
+  .tile > i.lk1::after, .tile > i.lk2::after { content: ''; position: absolute; inset: -1px; pointer-events: none; }
+  .tile > i.lk2::after { background: linear-gradient(135deg, rgba(255,255,255,.6) 0 14%, rgba(127,208,255,.4) 14% 100%);
+    border: 3px solid #bff3ff; box-shadow: inset 0 0 0 2px #4fa8ee, 0 0 0 1px var(--ink); }
+  .tile > i.lk1::after { background: linear-gradient(135deg, rgba(255,255,255,.5) 0 12%, rgba(127,208,255,.22) 12% 100%),
+      linear-gradient(45deg, transparent 46%, rgba(255,255,255,.55) 46% 54%, transparent 54%);
+    border: 2px solid #bff3ff; box-shadow: 0 0 0 1px var(--ink); }
+  .tile > i.rock.rk2 { background-image: var(--rock2); }
+  .tile > i.rock.rk1 { background-image: var(--rock1); }
+  .tile > i.hitfx { animation: hitfx .3s steps(3); }
+  @keyframes hitfx { 50% { filter: brightness(2.4); transform: scale(1.18); } }
 
   /* ---------- Overlay ---------- */
   #overlay { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 18px; background: rgba(10,5,28,.84); }
@@ -181,12 +189,12 @@
 <div class="app">
   <header>
     <canvas id="mascot" class="mascot" width="36" height="36"></canvas>
-    <div>
+    <div class="hd">
       <div class="brand">HARBU<span>ZOO</span></div>
       <div class="bubble" id="bubble">GANBATTE!</div>
     </div>
-    <div class="spacer"></div>
-    <button class="pbtn sq" id="soundBtn" aria-pressed="true" title="Lyd">&#9834;</button>
+    <button class="pbtn sq" id="musicBtn" aria-pressed="true" title="Musik">&#9835;</button>
+    <button class="pbtn sq txt" id="soundBtn" aria-pressed="true" title="Lydeffekter">SFX</button>
     <button class="pbtn sq" id="mapBtn" title="Kort" hidden>&#9650;</button>
   </header>
 
@@ -216,17 +224,6 @@
       <div class="small" id="shufHint">+1 ved 1000 point</div>
     </div>
   </section>
-
-  <!-- ============ BONUSBANE ============ -->
-  <section class="screen" id="scrBonus" hidden>
-    <div class="stats">
-      <div class="stat"><b id="bScore">0</b><i>POINT</i></div>
-      <div class="stat"><b id="bLives">&#9829;&#9829;&#9829;</b><i>LIV</i></div>
-      <div class="stat"><b id="bTime">45</b><i>TID</i></div>
-    </div>
-    <div id="bonusWrap"><canvas id="bonusCanvas"></canvas></div>
-    <div class="maphint">TR&AElig;K FOR AT STYRE &middot; BILEN SKYDER SELV</div>
-  </section>
 </div>
 
 <div id="overlay"><div class="card" id="card"></div></div>
@@ -236,7 +233,7 @@
   'use strict';
 
   // ====================== Konstanter ======================
-  var SIZE = 8, TYPES = 7, MAX_LEVEL = 30, BONUS_EVERY = 5;
+  var SIZE = 8, TYPES = 7;
   var TIME_MAX = 60, TIME_START = 45, TIME_PER_TILE = 0.3;
   var SHUFFLE_START = 2, SHUFFLE_EVERY = 1000, SHUFFLE_CAP = 9;
   var SWAP_MS = 170, POP_MS = 220, FALL_MS = 210;
@@ -270,6 +267,17 @@
     rows: ['.....KKKKKK.....','....KYYYYYYK....','...KYWWWWWWYK...','..KKKKKKKKKKKK..','.KRRRRRRRRRRRRK.',
            'KRRRRRRRRRRRRRRK','KRRDDDDDDDDDDRRK','KKKKKKKKKKKKKKKK','..KTTK....KTTK..','..TGGT....TGGT..',
            '..KTTK....KTTK..','...KK......KK...'] };
+  var GLASS = { pal: { K:'#2a1a2e', L:'#bff3ff', W:'#ffffff' },
+    rows: ['KKKKKKKKKKKK','KLLLLLLLLLLK','KLWWLLLLLLLK','KLWLLLLLLLLK','KLLLLLLLLLLK','KLLLLLLLLLLK',
+           'KLLLLLLLLLLK','KLLLLLLLLWLK','KLLLLLLLWWLK','KLLLLLLLLLLK','KLLLLLLLLLLK','KKKKKKKKKKKK'] };
+  var ROCK_ROWS = ['............','...KKKKKK...','..KLLLSSSK..','.KLLSSSSSSK.','KLLSSSSSSDDK','KLSSSSSSSSDK',
+                   'KSSSSSSSSSDK','KSSSSSSSDDDK','KSSSSSDDDDDK','.KDDDDDDDDK.','..KKKKKKKK..','............'];
+  var ROCK_PAL = { K:'#2a1a2e', L:'#b3acd0', S:'#8a82a8', D:'#5d5680' };
+  var ROCK2 = { pal: ROCK_PAL, rows: ROCK_ROWS };
+  var ROCK1 = { pal: ROCK_PAL, rows: ROCK_ROWS.map(function (row, y) {      // revnet: ét slag tilbage
+    var cr = { 3: 5, 4: 6, 5: 5, 6: 6, 7: 7, 8: 7 }[y];
+    return cr === undefined ? row : row.substr(0, cr) + 'K' + row.substr(cr + 1);
+  }) };
   var INK = '#2a1a2e';
   var FONT3 = {
     '0':['111','101','101','101','111'], '1':['010','110','010','010','111'], '2':['111','001','111','100','111'],
@@ -359,18 +367,20 @@
     root.style.setProperty('--ic-col', 'url(' + iconCol(px).toDataURL() + ')');
     root.style.setProperty('--ic-bomb', 'url(' + iconBomb(px).toDataURL() + ')');
     root.style.setProperty('--orb', 'url(' + orbCanvas(px).toDataURL() + ')');
+    root.style.setProperty('--rock1', 'url(' + spriteCanvas(ROCK1, px).toDataURL() + ')');
+    root.style.setProperty('--rock2', 'url(' + spriteCanvas(ROCK2, px).toDataURL() + ')');
     root.style.setProperty('--sp', (12 * px) + 'px');
   }
-  function spriteUrl(type) { return 'url(' + spriteCanvas(SPRITES[type], 2).toDataURL() + ')'; }
+  function spriteUrl(type) { return 'url(' + spriteCanvas(type === 'obst' ? GLASS : SPRITES[type], 2).toDataURL() + ')'; }
 
   // ====================== Gem ======================
-  var save = { unlocked: 1, stars: {}, total: 0, best: 0, seed: Math.floor(Math.random() * 99999), sound: true };
+  var save = { done: {}, pos: '0:0', total: 0, best: 0, seed: Math.floor(Math.random() * 99999), sound: true, music: true };
   try {
     var raw = localStorage.getItem('harbuzoo.save');
     if (raw) { var o = JSON.parse(raw); for (var k in o) if (o[k] !== undefined) save[k] = o[k]; }
   } catch (e) {}
   function persist() { try { localStorage.setItem('harbuzoo.save', JSON.stringify(save)); } catch (e) {} }
-  function totalStars() { var s = 0; for (var k in save.stars) s += save.stars[k]; return s; }
+  function totalStars() { var s = 0; for (var k in save.done) s += save.done[k]; return s; }
 
   // ====================== DOM ======================
   function $(id) { return document.getElementById(id); }
@@ -378,30 +388,122 @@
   var scoreEl = $('score'), levelNEl = $('levelN'), bestEl = $('best');
   var timerEl = $('timer'), fillEl = $('timerFill'), goalsEl = $('goals');
   var overlay = $('overlay'), cardEl = $('card');
-  var soundBtn = $('soundBtn'), mapBtn = $('mapBtn'), shuffleBtn = $('shuffleBtn');
+  var soundBtn = $('soundBtn'), musicBtn = $('musicBtn'), mapBtn = $('mapBtn'), shuffleBtn = $('shuffleBtn');
   var shufN = $('shufN'), shufHint = $('shufHint'), bubble = $('bubble'), mascot = $('mascot');
-  var scrMap = $('scrMap'), scrGame = $('scrGame'), scrBonus = $('scrBonus');
+  var scrMap = $('scrMap'), scrGame = $('scrGame');
 
   // ====================== Lyd ======================
-  var actx = null, soundOn = save.sound !== false;
+  var actx = null, soundOn = save.sound !== false, musicOn = save.music !== false;
   var SCALE = [262,294,330,392,440,523,587,659,784,880,988,1175];
   soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+  musicBtn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
+  function ac() {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
   function beep(freq, dur, vol, type) {
     if (!soundOn) return;
     try {
-      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === 'suspended') actx.resume();
-      var o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+      var c = ac(), o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
       o.type = type || 'square'; o.frequency.value = freq;
       g.gain.setValueAtTime(0.0001, t);
       g.gain.linearRampToValueAtTime(vol || 0.04, t + 0.008);
       g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.12));
-      o.connect(g); g.connect(actx.destination);
+      o.connect(g); g.connect(c.destination);
       o.start(t); o.stop(t + (dur || 0.12) + 0.02);
     } catch (e) {}
   }
   function arp(notes, gap) { notes.forEach(function (n, i) { setTimeout(function () { beep(SCALE[n], .11, .04); }, i * (gap || 70)); }); }
   function vibrate(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
+
+  // ---------- Musik: lille Game Boy-agtig melodi (pulsbølge, trekant-bas og hi-hat) ----------
+  var BPM = 128, STEP = 60 / BPM / 2;                       // ottendedele
+  var LEAD = [                                              // 16 takter à 8 trin. '.' = pause, '=' = hold tonen
+    'e5 . g5 e5 c5 . d5 e5', 'a4 . c5 e5 a5 . g5 e5', 'f5 . a5 f5 c5 . d5 f5', 'g5 . d5 g5 b4 . d5 g5',
+    'c6 . g5 e5 g5 . e5 c5', 'a5 . e5 c5 e5 . a4 c5', 'f5 a5 c6 a5 f5 a5 f5 d5', 'g5 = d5 = b4 d5 g5 =',
+    'c5 . a4 c5 f5 . e5 c5', 'd5 . b4 d5 g5 . f5 d5', 'e5 . c5 e5 g5 . e5 c5', 'a4 c5 e5 a5 g5 e5 c5 .',
+    'd5 . f5 a5 f5 . d5 f5', 'g5 . b4 d5 g5 . f5 d5', 'e5 g5 c6 g5 e5 g5 e5 c5', 'c5 = e5 = g5 = g5 .'
+  ];
+  var BASS = ['c3','a2','f3','g3','c3','a2','f3','g3','f3','g3','c3','a2','d3','g3','c3','c3'];
+  var musicSteps = null, musicTimer = null, musicNext = 0, musicStep = 0, musicBus = null, pulseWave = null, noiseBuf = null;
+  function hz(name, add) {
+    var m = /^([a-g])(#?)(\d)$/.exec(name);
+    var midi = 12 * (+m[3] + 1) + { c:0, d:2, e:4, f:5, g:7, a:9, b:11 }[m[1]] + (m[2] ? 1 : 0) + (add || 0);
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+  function buildMusic() {
+    if (musicSteps) return;
+    musicSteps = [];
+    LEAD.forEach(function (bar, bi) {
+      var toks = bar.split(' ');
+      toks.forEach(function (tk, si) {
+        var st = { lead: null, bass: null, hat: si % 2 === 1 };
+        if (tk === '=') { for (var k = musicSteps.length - 1; k >= 0; k--) if (musicSteps[k].lead) { musicSteps[k].lead.len++; break; } }
+        else if (tk !== '.') st.lead = { f: hz(tk), len: 1 };
+        if (si === 0 || si === 2 || si === 6) st.bass = hz(BASS[bi]);
+        else if (si === 4) st.bass = hz(BASS[bi], 7);
+        musicSteps.push(st);
+      });
+    });
+    var c = ac(), n = 12, re = new Float32Array(33), im = new Float32Array(33), d = 0.25;
+    for (n = 1; n <= 32; n++) { re[n] = (2 / (n * Math.PI)) * Math.sin(n * Math.PI * d); im[n] = (2 / (n * Math.PI)) * (1 - Math.cos(n * Math.PI * d)); }
+    pulseWave = c.createPeriodicWave(re, im);                // 25 % pulsbølge som på en Game Boy
+    noiseBuf = c.createBuffer(1, Math.floor(c.sampleRate * 0.05), c.sampleRate);
+    var data = noiseBuf.getChannelData(0);
+    for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    musicBus = c.createGain(); musicBus.gain.value = 1; musicBus.connect(c.destination);
+  }
+  function playStep(st, t) {
+    var c = actx, o, g;
+    if (st.lead) {
+      o = c.createOscillator(); g = c.createGain();
+      o.setPeriodicWave(pulseWave); o.frequency.value = st.lead.f;
+      var len = st.lead.len * STEP;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.032, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.018, t + len * 0.7);
+      g.gain.linearRampToValueAtTime(0.0001, t + len * 0.97);
+      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + len);
+    }
+    if (st.bass) {
+      o = c.createOscillator(); g = c.createGain();
+      o.type = 'triangle'; o.frequency.value = st.bass;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.07, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + STEP * 1.8);
+      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + STEP * 1.9);
+    }
+    if (st.hat) {
+      var s = c.createBufferSource(), hp = c.createBiquadFilter();
+      g = c.createGain(); hp.type = 'highpass'; hp.frequency.value = 6000;
+      s.buffer = noiseBuf;
+      g.gain.setValueAtTime(0.012, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+      s.connect(hp); hp.connect(g); g.connect(musicBus); s.start(t);
+    }
+  }
+  function musicTick() {
+    if (!musicOn || !actx) return;
+    var now = actx.currentTime;
+    if (musicNext < now) musicNext = now + 0.05;
+    while (musicNext < now + 0.3) {
+      playStep(musicSteps[musicStep], musicNext);
+      musicNext += STEP; musicStep = (musicStep + 1) % musicSteps.length;
+    }
+  }
+  function startMusic() {
+    if (!musicOn || musicTimer) return;
+    try { ac(); buildMusic(); } catch (e) { return; }
+    musicNext = actx.currentTime + 0.1;
+    musicTimer = setInterval(musicTick, 80);
+  }
+  function stopMusic() { clearInterval(musicTimer); musicTimer = null; }
+  // Browsere kræver et tryk før lyd må starte
+  function unlockAudio() {
+    if (musicOn && !musicTimer) startMusic();
+    else if (actx && actx.state === 'suspended') actx.resume();
+  }
+  ['pointerdown', 'touchend', 'click'].forEach(function (ev) { document.addEventListener(ev, unlockAudio, true); });
 
   // ====================== Maskot ======================
   var IDLE = ['GANBATTE!', 'KAWAII ZOO!', 'FIGHT-O!', 'ITADAKIMASU!', 'SA, IKOU!'], sayT = null;
@@ -463,137 +565,215 @@
   }
 
   // ====================== Banedefinition ======================
-  function isBonus(n) { return n % BONUS_EVERY === 0; }
-  function rngFor(n) { var s = (save.seed + n * 7919) % 2147483647 || 1; return function () { s = (s * 16807) % 2147483647; return s / 2147483647; }; }
-  function levelConfig(n) {
-    var rnd = rngFor(n);
-    var pool = Math.min(TYPES, 5 + Math.floor(n / 7));                 // antal dyrearter i spil
-    var kinds = 1 + Math.min(2, Math.floor((n - 1) / 4));
-    var need = Math.min(44, 12 + Math.round(n * 1.1));
-    var order = [], i;
-    for (i = 0; i < pool; i++) order.push(i);
-    for (i = order.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)), t = order[i]; order[i] = order[j]; order[j] = t; }
-    var goals = [];
-    for (i = 0; i < kinds; i++) goals.push({ type: order[i], need: need - Math.floor(i * need * 0.1), got: 0 });
-    return { n: n, pool: pool, goals: goals, drain: 1 + (n - 1) * 0.03, target: need * kinds * 100 };
+  function nodeRng(nd) {
+    var s = (save.seed + nd.n * 7919 + nd.lane * 104729) % 2147483647 || 1;
+    return function () { s = (s * 16807) % 2147483647; return s / 2147483647; };
   }
+  // Sværhedsgraden vokser med banenummer og aftager aldrig helt: flere arter, flere forhindringer, hurtigere tid
+  function levelConfig(nd) {
+    var n = nd.n, rnd = nodeRng(nd), i, j;
+    var pool = Math.min(TYPES, 5 + Math.floor(n / 8));
+    var obst = [];
+    if (n >= 4) {
+      var glass = Math.min(16, 2 + Math.floor((n - 4) * 0.6) + (rnd() < 0.5 ? 1 : 0));
+      var thick = n >= 10 ? Math.min(0.6, (n - 10) * 0.04) : 0;
+      for (i = 0; i < glass; i++) obst.push({ kind: 'glass', hp: rnd() < thick ? 2 : 1 });
+    }
+    if (n >= 16) {
+      var rocks = Math.min(10, 1 + Math.floor((n - 16) * 0.3));
+      for (i = 0; i < rocks; i++) obst.push({ kind: 'rock', hp: n >= 28 ? 2 : 1 });
+    }
+    var obstGoal = obst.length > 0 && n % 2 === 0;
+    var kinds = Math.min(obstGoal ? 2 : 3, 1 + Math.floor((n - 1) / 4));
+    var need = Math.min(44, 12 + Math.round(n * 1.1));
+    var order = [], goals = [], animals = 0;
+    for (i = 0; i < pool; i++) order.push(i);
+    for (i = order.length - 1; i > 0; i--) { j = Math.floor(rnd() * (i + 1)); var t = order[i]; order[i] = order[j]; order[j] = t; }
+    for (i = 0; i < kinds; i++) {
+      var nn = need - Math.floor(i * need * 0.1);
+      goals.push({ type: order[i], need: nn, got: 0 });
+      animals += nn;
+    }
+    if (obstGoal) goals.push({ type: 'obst', need: Math.max(1, Math.ceil(obst.length * 0.7)), got: 0 });
+    return { n: n, id: nd.id, pool: pool, goals: goals, obst: obst, drain: Math.min(2.2, 1 + (n - 1) * 0.03), target: animals * 100 };
+  }
+  function goalName(g) { return g.type === 'obst' ? 'GLAS/STEN' : NAMES[g.type]; }
 
-  // ====================== Kort ======================
+  // ====================== Kort: uendelig sti med gafler ======================
   var mapCanvas = $('mapCanvas'), mapScroll = $('mapScroll'), mapInner = $('mapInner'), carEl = $('car');
-  var MAPW = 180, NODE_DY = 52, nodes = [], mapScale = 2, mapH = 0;
-  function buildPath() {
-    nodes = [];
-    var s = save.seed || 1;
-    function rnd() { s = (s * 16807) % 2147483647; return s / 2147483647; }
-    mapH = MAX_LEVEL * NODE_DY + 90;
-    for (var i = 0; i < MAX_LEVEL; i++) {
-      var t = i / (MAX_LEVEL - 1);
-      var wobble = Math.sin(i * 0.95 + save.seed % 6) * (46 - t * 22) + (rnd() - 0.5) * 20;
-      var x = Math.round(90 + wobble);
-      nodes.push({ n: i + 1, x: Math.max(26, Math.min(MAPW - 26, x)), y: Math.round(mapH - 50 - i * NODE_DY) });
+  var MAPW = 180, NODE_DY = 52, ZONE_ROWS = 18, AHEAD = 18;
+  var rows = [], nodeById = {}, gen = null, rowLo = 0, mapScale = 2, mapH = 0;
+  var ZONES = [
+    { c: '#27405a', deco: 'tree' }, { c: '#3a2d6e', deco: 'rock' }, { c: '#4a3f7a', deco: 'rock' },
+    { c: '#d8d2f2', deco: 'snow' }, { c: '#6a2b78', deco: 'cloud' }
+  ];
+  function zoneAt(row) { return ZONES[Math.max(0, Math.floor(row / ZONE_ROWS)) % ZONES.length]; }
+  function seeded(seed) { var s = Math.floor(seed) % 2147483647 || 1; return function () { s = (s * 16807) % 2147483647; return s / 2147483647; }; }
+
+  // Stien genereres række for række ud fra gemmets seed. Af og til deler den sig i to baner, som mødes igen.
+  function resetPath() {
+    rows = []; nodeById = {};
+    gen = { rnd: seeded(save.seed || 1), mode: 'single', since: 0, gap: 3, left: 0 };
+    genRows(AHEAD + 4);
+  }
+  function genRows(upTo) {
+    while (rows.length <= upTo) {
+      var r = rows.length, prev = rows[r - 1], kind;
+      if (gen.mode === 'fork') {
+        if (gen.left > 0) { gen.left--; kind = 'fork'; }
+        else { gen.mode = 'single'; gen.since = 0; gen.gap = 4 + Math.floor(gen.rnd() * 4); kind = 'single'; }
+      } else if (gen.since >= gen.gap) {
+        gen.mode = 'fork'; gen.left = 2 + Math.floor(gen.rnd() * 3); kind = 'fork';
+      } else { gen.since++; kind = 'single'; }
+      var cx = 90 + Math.sin(r * 0.95 + (save.seed % 6)) * 30 + (gen.rnd() - 0.5) * 14;
+      var row = { nodes: [] };
+      if (kind === 'single') {
+        row.nodes.push({ id: r + ':0', r: r, n: r + 1, lane: 0, x: Math.round(Math.max(34, Math.min(146, cx))), parents: [], children: [] });
+      } else {
+        cx = Math.max(66, Math.min(114, cx));
+        row.nodes.push({ id: r + ':1', r: r, n: r + 1, lane: 1, x: Math.round(cx - 34 + (gen.rnd() - 0.5) * 8), parents: [], children: [] });
+        row.nodes.push({ id: r + ':2', r: r, n: r + 1, lane: 2, x: Math.round(cx + 34 + (gen.rnd() - 0.5) * 8), parents: [], children: [] });
+      }
+      row.nodes.forEach(function (nd) {
+        var ps = [];
+        if (prev) ps = (kind === 'fork' && prev.nodes.length === 2) ? prev.nodes.filter(function (o) { return o.lane === nd.lane; }) : prev.nodes;
+        nd.parents = ps.map(function (p) { return p.id; });
+        ps.forEach(function (p) { p.children.push(nd.id); });
+        nodeById[nd.id] = nd;
+      });
+      rows.push(row);
+    }
+  }
+  function maxDoneRow() {
+    var m = -1;
+    for (var id in save.done) { var rr = parseInt(id, 10); if (rr > m) m = rr; }
+    return m;
+  }
+  // done = klaret, open = kan spilles, locked = endnu ikke nået, closed = den anden gren er valgt
+  function nodeState(nd) {
+    if (save.done[nd.id]) return 'done';
+    if (nd.r > 0) {
+      if (!nd.parents.some(function (p) { return save.done[p]; })) return 'locked';
+      if (nd.lane) {
+        var sib = rows[nd.r].nodes.filter(function (o) { return o !== nd; })[0];
+        if (sib && save.done[sib.id]) return 'closed';
+      }
+    }
+    return 'open';
+  }
+  function yOf(nd) { return mapH - 50 - (nd.r - rowLo) * NODE_DY; }
+
+  function drawDecor(g, kind, tx, ty, s) {
+    if (kind === 'tree') {
+      g.fillStyle = '#1f6b3a'; g.fillRect(tx * s, ty * s, 4 * s, 3 * s); g.fillRect((tx + 1) * s, (ty - 2) * s, 2 * s, 2 * s);
+      g.fillStyle = '#4a2c14'; g.fillRect((tx + 1) * s, (ty + 3) * s, 2 * s, 2 * s);
+    } else if (kind === 'rock') {
+      g.fillStyle = '#50447f'; g.fillRect(tx * s, ty * s, 4 * s, 2 * s); g.fillRect((tx + 1) * s, (ty - 1) * s, 2 * s, s);
+    } else if (kind === 'snow') {
+      g.fillStyle = '#ffffff'; g.fillRect(tx * s, ty * s, 5 * s, 2 * s); g.fillRect((tx + 1) * s, (ty - 1) * s, 3 * s, s);
+      g.fillStyle = '#b9b2e0'; g.fillRect(tx * s, (ty + 2) * s, 5 * s, s);
+    } else {
+      g.fillStyle = 'rgba(255,157,181,.6)'; g.fillRect(tx * s, ty * s, 9 * s, 2 * s); g.fillRect((tx + 2) * s, (ty - 2) * s, 5 * s, 2 * s);
     }
   }
   function drawMap() {
+    var mdr = maxDoneRow(), hi = Math.max(AHEAD + 4, mdr + AHEAD + 1), i, x, y, r;
+    genRows(hi);
+    rowLo = Math.max(0, mdr - 110);
     var cw = mapScroll.clientWidth || 360;
     mapScale = Math.max(2, Math.min(4, Math.floor(cw / MAPW)));
     var s = mapScale;
+    mapH = (hi - rowLo + 1) * NODE_DY + 110;
     mapCanvas.width = MAPW * s; mapCanvas.height = mapH * s;
     mapInner.style.height = (mapH * s * (cw / (MAPW * s))) + 'px';
-    var g = mapCanvas.getContext('2d'), i, x, y;
-    // bjergsider: skov nederst, klippe, sne på toppen
-    var rs = (save.seed || 1) % 1000 + 3;
-    function rnd() { rs = (rs * 16807) % 2147483647; return rs / 2147483647; }
+    var g = mapCanvas.getContext('2d');
+    var rowY = function (rr) { return mapH - 50 - (rr - rowLo) * NODE_DY; };
+    // bjergsiden: zoner skifter jo højere man kommer (skov, klipper, sne, skyer, ...)
     for (y = 0; y < mapH; y++) {
-      var alt = 1 - y / mapH;                        // 1 = toppen af bjerget
-      var col = alt > 0.9 ? '#e9e4ff' : alt > 0.72 ? '#4a3f7a' : alt > 0.4 ? '#3a2d6e' : '#27405a';
-      g.fillStyle = col;
+      g.fillStyle = zoneAt(rowLo + (mapH - 50 - y) / NODE_DY).c;
       g.fillRect(0, y * s, MAPW * s, s);
       var jag = Math.round(Math.sin(y * 0.07) * 5 + Math.sin(y * 0.21) * 3 + 10);
-      g.fillStyle = '#140c33';                       // afgrund i begge sider
+      g.fillStyle = '#140c33';
       g.fillRect(0, y * s, jag * s, s);
       g.fillRect((MAPW - jag - Math.round(Math.sin(y * 0.13) * 4)) * s, y * s, (jag + 8) * s, s);
-      if (y % 29 === 0) { g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(jag * s, y * s, (MAPW - jag * 2) * s, s); }
     }
-    g.fillStyle = '#fff3d6';                         // stjerner over toppen
-    for (i = 0; i < 40; i++) g.fillRect(Math.floor(rnd() * MAPW) * s, Math.floor(rnd() * mapH * 0.08) * s, s, s);
-    // bevoksning: træer i skoven, sten højere oppe
-    for (i = 0; i < 120; i++) {
-      var tx = 16 + Math.floor(rnd() * (MAPW - 32)), ty = Math.floor(rnd() * mapH);
-      var near = nodes.some(function (nd) { return Math.abs(nd.y - ty) < 24 && Math.abs(nd.x - tx) < 24; });
-      if (near) continue;
-      var a2 = 1 - ty / mapH;
-      if (a2 > 0.86) continue;
-      if (a2 < 0.45) {
-        g.fillStyle = '#1f6b3a'; g.fillRect(tx * s, ty * s, 4 * s, 3 * s); g.fillRect((tx + 1) * s, (ty - 2) * s, 2 * s, 2 * s);
-        g.fillStyle = '#4a2c14'; g.fillRect((tx + 1) * s, (ty + 3) * s, 2 * s, 2 * s);
-      } else {
-        g.fillStyle = a2 > 0.72 ? '#6a5f9a' : '#50447f';
-        g.fillRect(tx * s, ty * s, 4 * s, 2 * s); g.fillRect((tx + 1) * s, (ty - 1) * s, 2 * s, s);
+    // bevoksning pr. række (samme hver gang kortet tegnes)
+    for (r = Math.max(0, rowLo - 1); r <= hi; r++) {
+      var rr = seeded((save.seed || 1) * 3 + r * 977), zone = zoneAt(r);
+      for (var d = 0; d < 3; d++) {
+        var tx = 16 + Math.floor(rr() * (MAPW - 32)), ty = Math.round(rowY(r) - rr() * NODE_DY), near = false;
+        for (var q = Math.max(0, r - 1); q <= Math.min(hi, r + 1) && !near; q++) {
+          rows[q].nodes.forEach(function (nd) { if (Math.abs(nd.x - tx) < 24 && Math.abs(rowY(nd.r) - ty) < 24) near = true; });
+        }
+        if (!near) drawDecor(g, zone.deco, tx, ty, s);
       }
     }
-    // torii ved toppen
-    var tux = 90, tuy = 26;
-    g.fillStyle = '#e8334a';
-    g.fillRect((tux - 10) * s, tuy * s, 3 * s, 16 * s); g.fillRect((tux + 7) * s, tuy * s, 3 * s, 16 * s);
-    g.fillRect((tux - 15) * s, (tuy - 5) * s, 30 * s, 3 * s); g.fillRect((tux - 12) * s, tuy * s, 24 * s, 2 * s);
-    g.fillStyle = INK; g.fillRect((tux - 16) * s, (tuy - 7) * s, 32 * s, 2 * s);
-    // vejen
-    for (i = 0; i < nodes.length - 1; i++) {
-      var a = nodes[i], b = nodes[i + 1], steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y));
-      for (var k = 0; k <= steps; k++) {
-        x = Math.round(a.x + (b.x - a.x) * k / steps);
-        y = Math.round(a.y + (b.y - a.y) * k / steps);
-        g.fillStyle = '#3a2d5e'; g.fillRect((x - 5) * s, y * s, 11 * s, s);
-        g.fillStyle = '#4a3b74'; g.fillRect((x - 5) * s, y * s, s, s); g.fillRect((x + 5) * s, y * s, s, s);
-        if (k % 8 < 3) { g.fillStyle = '#ffd23f'; g.fillRect(x * s, y * s, s, s); }
-      }
+    // torii-porte ved hver zonegrænse
+    for (r = ZONE_ROWS; r <= hi; r += ZONE_ROWS) {
+      if (r < rowLo) continue;
+      var tux = 90, tuy = Math.round(rowY(r) + NODE_DY / 2) - 8;
+      g.fillStyle = '#e8334a';
+      g.fillRect((tux - 10) * s, tuy * s, 3 * s, 16 * s); g.fillRect((tux + 7) * s, tuy * s, 3 * s, 16 * s);
+      g.fillRect((tux - 15) * s, (tuy - 5) * s, 30 * s, 3 * s); g.fillRect((tux - 12) * s, tuy * s, 24 * s, 2 * s);
+      g.fillStyle = INK; g.fillRect((tux - 16) * s, (tuy - 7) * s, 32 * s, 2 * s);
     }
-    // prikker
-    nodes.forEach(function (nd) {
-      var unlocked = nd.n <= save.unlocked, bonus = isBonus(nd.n), st = save.stars[nd.n] || 0;
-      var r = 9;
-      for (y = -r; y <= r; y++) for (x = -r; x <= r; x++) {
-        var d = x * x + y * y;
-        if (d > r * r) continue;
-        g.fillStyle = d > (r - 2) * (r - 2) ? INK : (!unlocked ? '#4a3f6b' : (bonus ? '#36e0ff' : '#e8334a'));
-        g.fillRect((nd.x + x) * s, (nd.y + y) * s, s, s);
-      }
-      if (!unlocked) {                                   // hængelås
-        g.fillStyle = '#2a2142'; g.fillRect((nd.x - 3) * s, (nd.y - 1) * s, 6 * s, 5 * s);
-        g.fillRect((nd.x - 2) * s, (nd.y - 4) * s, s, 3 * s); g.fillRect((nd.x + 1) * s, (nd.y - 4) * s, s, 3 * s);
-        g.fillRect((nd.x - 2) * s, (nd.y - 5) * s, 4 * s, s);
-      } else if (bonus) {                                 // stjerne
-        ['....X....','...XXX...','XXXXXXXXX','.XXXXXXX.','..XXXXX..','..XX.XX..','.XX...XX.'].forEach(function (row, ry) {
-          for (var rx = 0; rx < row.length; rx++) if (row.charAt(rx) === 'X') {
-            g.fillStyle = '#ffd23f'; g.fillRect((nd.x - 4 + rx) * s, (nd.y - 4 + ry) * s, s, s);
+    // vejene
+    rows.forEach(function (row) {
+      row.nodes.forEach(function (nd) {
+        if (nd.r < rowLo) return;
+        nd.parents.forEach(function (pid) {
+          var a = nodeById[pid], steps = Math.ceil(Math.hypot(nd.x - a.x, rowY(nd.r) - rowY(a.r)));
+          if (a.r < rowLo) return;
+          for (var k = 0; k <= steps; k++) {
+            var px = Math.round(a.x + (nd.x - a.x) * k / steps), py = Math.round(rowY(a.r) + (rowY(nd.r) - rowY(a.r)) * k / steps);
+            g.fillStyle = '#3a2d5e'; g.fillRect((px - 5) * s, py * s, 11 * s, s);
+            g.fillStyle = '#4a3b74'; g.fillRect((px - 5) * s, py * s, s, s); g.fillRect((px + 5) * s, py * s, s, s);
+            if (k % 8 < 3) { g.fillStyle = '#ffd23f'; g.fillRect(px * s, py * s, s, s); }
           }
         });
-      } else drawNum(g, nd.n, nd.x * s, nd.y * s, s, '#fff3d6');
-      for (var si = 0; si < 3; si++) {                    // stjerner under prikken
-        g.fillStyle = si < st ? '#ffd23f' : '#3a2d5e';
-        g.fillRect((nd.x - 7 + si * 5) * s, (nd.y + 11) * s, 3 * s, 3 * s);
-      }
+      });
+    });
+    // prikker
+    rows.forEach(function (row) {
+      row.nodes.forEach(function (nd) {
+        if (nd.r < rowLo) return;
+        var st = nodeState(nd), stars = save.done[nd.id] || 0, cy = rowY(nd.r), rad = 9, xx, yy;
+        var fill = st === 'done' ? '#3fbf6a' : st === 'open' ? '#e8334a' : st === 'closed' ? '#3a3455' : '#4a3f6b';
+        for (yy = -rad - 2; yy <= rad + 2; yy++) for (xx = -rad - 2; xx <= rad + 2; xx++) {
+          var dd = xx * xx + yy * yy;
+          if (dd <= rad * rad) g.fillStyle = dd > (rad - 2) * (rad - 2) ? INK : fill;
+          else if (st === 'open' && dd <= (rad + 2) * (rad + 2)) g.fillStyle = '#ffd23f';
+          else continue;
+          g.fillRect((nd.x + xx) * s, (cy + yy) * s, s, s);
+        }
+        if (st === 'locked') {
+          g.fillStyle = '#2a2142'; g.fillRect((nd.x - 3) * s, (cy - 1) * s, 6 * s, 5 * s);
+          g.fillRect((nd.x - 2) * s, (cy - 4) * s, s, 3 * s); g.fillRect((nd.x + 1) * s, (cy - 4) * s, s, 3 * s);
+          g.fillRect((nd.x - 2) * s, (cy - 5) * s, 4 * s, s);
+        } else drawNum(g, nd.n, nd.x * s, cy * s, s, st === 'closed' ? '#6a5f9a' : '#fff3d6');
+        for (var si = 0; si < 3; si++) {
+          g.fillStyle = si < stars ? '#ffd23f' : '#3a2d5e';
+          g.fillRect((nd.x - 7 + si * 5) * s, (cy + 12) * s, 3 * s, 3 * s);
+        }
+      });
     });
     // bil
-    var cp = Math.max(2, Math.floor(mapScale * 0.8));
-    spriteCanvas(CAR, cp, carEl.tagName === 'CANVAS' ? carEl : null);
     carEl.style.backgroundImage = 'url(' + spriteCanvas(CAR, 2).toDataURL() + ')';
     carEl.style.backgroundSize = '100% 100%';
-    placeCar(Math.min(save.unlocked, MAX_LEVEL));
+    placeCar();
   }
   function mapPx() { return (mapScroll.clientWidth || 360) / MAPW; }   // CSS-px pr. kortenhed
-  function placeCar(levelN) {
-    var nd = nodes[Math.max(0, Math.min(nodes.length - 1, levelN - 1))];
-    if (!nd) return;
-    carAt(nd.x, nd.y);
+  function placeCar() {
+    var nd = nodeById[save.pos];
+    if (nd) carAt(nd.x, yOf(nd));
   }
+  var carFlip = false;
   function carAt(ux, uy) {
     var p = mapPx(), w = 16 * p * 1.3, h = 12 * p * 1.3;
     carEl.style.width = w + 'px'; carEl.style.height = h + 'px';
     carEl.style.transform = 'translate3d(' + (ux * p - w / 2) + 'px,' + (uy * p - h - 9 * p) + 'px,0)' + (carFlip ? ' scaleX(-1)' : '');
     carEl._ux = ux; carEl._uy = uy;
   }
-  var carFlip = false;
   function scrollToCar(smooth) {
     var p = mapPx(), y = (carEl._uy || 0) * p - mapScroll.clientHeight * 0.6;
     try { mapScroll.scrollTo({ top: Math.max(0, y), behavior: smooth ? 'smooth' : 'auto' }); }
@@ -606,10 +786,10 @@
     mapInner.appendChild(el);
     setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 640);
   }
-  // Kør bilen fra bane a til bane b
-  function driveTo(fromN, toN, done) {
-    var a = nodes[fromN - 1], b = nodes[toN - 1];
+  // Kør bilen fra en prik til en anden
+  function driveTo(a, b, done) {
     if (!a || !b) { if (done) done(); return; }
+    var ay = yOf(a), by = yOf(b);
     carFlip = b.x < a.x;
     var t0 = performance.now(), dur = 900, lastPuff = 0;
     say('BRUM BRUM!');
@@ -617,27 +797,32 @@
     (function step(now) {
       var t = Math.min(1, (now - t0) / dur);
       var e = t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-      carAt(a.x + (b.x - a.x) * e, a.y + (b.y - a.y) * e);
+      carAt(a.x + (b.x - a.x) * e, ay + (by - ay) * e);
       if (now - lastPuff > 120) { lastPuff = now; puff(carEl._ux - 2, carEl._uy); }
       scrollToCar(false);
       if (t < 1) requestAnimationFrame(step);
-      else { carFlip = false; carAt(b.x, b.y); if (done) done(); }
+      else { carFlip = false; carAt(b.x, by); if (done) done(); }
     })(t0);
   }
   mapScroll.addEventListener('click', function (e) {
     var rect = mapCanvas.getBoundingClientRect(), p = mapPx();
     var ux = (e.clientX - rect.left) / p, uy = (e.clientY - rect.top) / p;
-    for (var i = 0; i < nodes.length; i++) {
-      var nd = nodes[i];
-      if (Math.abs(nd.x - ux) < 13 && Math.abs(nd.y - uy) < 13) {
-        if (nd.n > save.unlocked) { say('LÅST! SPIL BANE ' + save.unlocked); beep(150, .12, .05); return; }
-        openLevel(nd.n);
+    for (var ri = 0; ri < rows.length; ri++) {
+      var nds = rows[ri].nodes;
+      for (var i = 0; i < nds.length; i++) {
+        var nd = nds[i];
+        if (nd.r < rowLo || Math.abs(nd.x - ux) > 13 || Math.abs(yOf(nd) - uy) > 13) continue;
+        var st = nodeState(nd);
+        if (st === 'locked') { say('LÅST! KLAR DEN FØR'); beep(150, .12, .05); }
+        else if (st === 'closed') { say('DEN STI BLEV VALGT FRA'); beep(150, .12, .05); }
+        else openLevel(nd);
         return;
       }
     }
   });
   function refreshMapHud() {
-    $('mBane').textContent = Math.min(save.unlocked, MAX_LEVEL);
+    var cur = nodeById[save.pos];
+    $('mBane').textContent = cur ? cur.n : 1;
     $('mStars').textContent = totalStars();
     $('mTotal').textContent = save.total;
   }
@@ -648,7 +833,6 @@
     screen = name;
     scrMap.hidden = name !== 'map';
     scrGame.hidden = name !== 'game';
-    scrBonus.hidden = name !== 'bonus';
     mapBtn.hidden = name === 'map';
     if (name === 'map') { refreshMapHud(); drawMap(); setTimeout(function () { scrollToCar(false); }, 30); }
     if (name === 'game') layout();
@@ -657,7 +841,7 @@
   // ====================== Overlay-kort ======================
   function card(html) { cardEl.innerHTML = html; overlay.hidden = false; }
   function closeCard() { overlay.hidden = true; }
-  function goalHtml(goals, cls) {
+  function goalHtml(goals) {
     return '<div class="goalrow">' + goals.map(function (g) {
       return '<div class="g"><span class="gi" style="background-image:' + spriteUrl(g.type) + '"></span><b>' + g.need + '</b></div>';
     }).join('') + '</div>';
@@ -669,32 +853,33 @@
   }
   function bindCard(id, fn) { var el = $(id); if (el) onTap(el, fn); }
 
-  function openLevel(n) {
-    if (isBonus(n)) {
-      card('<h1>BONUS!</h1><div class="jp">ボーナス</div>' +
-challenge_text() +
-        '<button class="play" id="cGo">KØR!</button><button class="play alt" id="cBack">TILBAGE</button>');
-      bindCard('cGo', function () { closeCard(); startBonus(n); });
-      bindCard('cBack', closeCard);
-      return;
-    }
-    var cfg = levelConfig(n);
-    card('<h1>BANE ' + n + '</h1><div class="jp">どうぶつパズル</div>' +
-      '<div class="rules"><p>SAML FØR TIDEN LØBER UD:</p></div>' + goalHtml(cfg.goals) +
-      '<div class="rules"><p>' + cfg.goals.map(function (g) { return NAMES[g.type] + ' x' + g.need; }).join('<br>') + '</p></div>' +
+  function openLevel(nd) {
+    var c = levelConfig(nd), tips = '';
+    var hasGlass = c.obst.some(function (o) { return o.kind === 'glass'; });
+    var hasThick = c.obst.some(function (o) { return o.kind === 'glass' && o.hp > 1; });
+    var hasRock = c.obst.some(function (o) { return o.kind === 'rock'; });
+    if (hasGlass) tips += '<p class="c1">GLAS: LAV EN STRIBE TÆT VED FOR AT BRYDE DET.</p>';
+    if (hasThick) tips += '<p class="c3">TYKT GLAS KRÆVER 2 STRIBER.</p>';
+    if (hasRock) tips += '<p class="c2">STEN: BRYD DEN PÅ SAMME MÅDE.</p>';
+    card('<h1>BANE ' + nd.n + '</h1><div class="jp">どうぶつパズル</div>' +
+      '<div class="rules"><p>SAML FØR TIDEN LØBER UD:</p></div>' + goalHtml(c.goals) +
+      '<div class="rules"><p>' + c.goals.map(function (g) { return goalName(g) + ' x' + g.need; }).join('<br>') + '</p></div>' +
+      (tips ? '<div class="rules">' + tips + '</div>' : '') +
       '<button class="play" id="cGo">START!</button><button class="play alt" id="cBack">TILBAGE</button>');
-    bindCard('cGo', function () { closeCard(); startLevel(n); });
+    bindCard('cGo', function () {
+      closeCard();
+      if (!save.done[nd.id] && save.pos !== nd.id) {          // kør hen til banen først (men ikke baglæns ved genspil)
+        var from = nodeById[save.pos];
+        save.pos = nd.id; persist();
+        driveTo(from, nd, function () { startLevel(nd); });
+      } else startLevel(nd);
+    });
     bindCard('cBack', closeCard);
-  }
-  function challenge_text() {
-    return '<div class="rules"><p>DYRENE ER STUKKET AF I RUMMET!</p>' +
-      '<p class="c1">TRÆK</p> for at styre bilen.<p class="c3">BILEN SKYDER SELV.</p>' +
-      '<p class="c2">UNDGÅ DERES BOMBER.</p></div>';
   }
 
   // ====================== MATCH-3 ======================
   var board = new Array(SIZE * SIZE).fill(null);
-  var score = 0, levelN = 1, cfg = null, timeLeft = TIME_START;
+  var score = 0, levelN = 1, cfg = null, curNode = null, timeLeft = TIME_START;
   var shuffles = SHUFFLE_START, nextShuffleAt = SHUFFLE_EVERY;
   var running = false, busy = false, ended = false;
   var selected = null, uid = 0, lastTick = 0, idleSince = 0, hintTiles = [];
@@ -715,7 +900,13 @@ challenge_text() +
     if (px !== curPx) setSprites(px);
     for (var i = 0; i < board.length; i++) if (board[i]) place(board[i], false);
   }
-  function paint(t) { t.i.className = t.special === 'rainbow' ? 'sp-rainbow' : 't' + t.type + (t.special ? ' sp-' + t.special : ''); }
+  function paint(t) {
+    var cl;
+    if (t.type === -2) cl = 'rock ' + (t.lock > 1 ? 'rk2' : 'rk1');
+    else cl = t.special === 'rainbow' ? 'sp-rainbow' : 't' + t.type + (t.special ? ' sp-' + t.special : '');
+    if (t.lock > 0 && t.type !== -2) cl += ' lk' + t.lock;
+    t.i.className = cl;
+  }
   function place(t, animate) {
     var cs = cell();
     if (!animate) t.el.style.transition = 'none';
@@ -727,13 +918,13 @@ challenge_text() +
     el.className = 'tile';
     var inner = document.createElement('i');
     el.appendChild(inner);
-    var t = { id: ++uid, type: type, special: special || null, r: r, c: c, el: el, i: inner };
+    var t = { id: ++uid, type: type, special: special || null, lock: 0, r: r, c: c, el: el, i: inner };
     paint(t); boardEl.appendChild(el); place(t, false);
     return t;
   }
   function removeTile(t) { if (t && t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el); }
 
-  function same(a, b) { return a && b && a.special !== 'rainbow' && b.special !== 'rainbow' && a.type === b.type; }
+  function same(a, b) { return a && b && !a.lock && !b.lock && a.special !== 'rainbow' && b.special !== 'rainbow' && a.type === b.type; }
   function findRuns() {
     var runs = [], r, c, run, i, cells;
     for (r = 0; r < SIZE; r++) {
@@ -806,6 +997,7 @@ challenge_text() +
     if (b) { b.r = Math.floor(i / SIZE); b.c = i % SIZE; }
   }
   function legalSwap(i, j) {
+    if (board[i].lock || board[j].lock) return false;
     if (board[i].special || board[j].special) return true;
     swapModel(i, j);
     var ok = findMatches().size > 0;
@@ -867,7 +1059,7 @@ challenge_text() +
       var rb = a.special === 'rainbow' ? a : b, o = rb === a ? b : a;
       cells.add(rb.r * SIZE + rb.c);
       if (o.special) {
-        board.forEach(function (t) { if (t && t.type === o.type && !t.special) { t.special = o.special; paint(t); } });
+        board.forEach(function (t) { if (t && t.type === o.type && !t.special && !t.lock) { t.special = o.special; paint(t); } });
         board.forEach(function (t, j) { if (t && t.type === o.type) cells.add(j); });
       } else targets[rb.id] = o.type;
       return { cells: cells, targets: targets };
@@ -889,6 +1081,20 @@ challenge_text() +
       do { type = randType(); guard++; } while (guard < 30 && createsMatch(r, c, type));
       board[idx(r, c)] = makeTile(type, r, c);
     }
+    if (!findMove()) { fillBoard(); return; }
+    if (cfg && cfg.obst.length) placeObstacles();
+  }
+  // Glas låser et dyr (kan ikke byttes eller matches); sten er en blok. Begge brydes af matches ved siden af.
+  function placeObstacles() {
+    var cells = [], i;
+    for (i = 0; i < board.length; i++) cells.push(i);
+    for (i = cells.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), tmp = cells[i]; cells[i] = cells[j]; cells[j] = tmp; }
+    cfg.obst.forEach(function (o, k) {
+      var t = board[cells[k]];
+      t.lock = o.hp;
+      if (o.kind === 'rock') { t.type = -2; t.special = null; }
+      paint(t);
+    });
     if (!findMove()) fillBoard();
   }
   function shuffleBoard() {
@@ -988,6 +1194,28 @@ challenge_text() +
       protect.forEach(function (c) { clear.delete(c); });
       var ex = expand(clear, protect, f && f.targets);
 
+      // forhindringer tager skade af eksplosioner og af matches lige ved siden af
+      var hits = new Set(), broken = 0, blasted = [];
+      clear.forEach(function (i) { if (board[i] && board[i].lock > 0) blasted.push(i); });
+      blasted.forEach(function (i) { clear.delete(i); hits.add(i); });
+      clear.forEach(function (i) {
+        var r0 = Math.floor(i / SIZE), c0 = i % SIZE;
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (dd) {
+          var rr = r0 + dd[0], cc = c0 + dd[1];
+          if (rr < 0 || cc < 0 || rr >= SIZE || cc >= SIZE) return;
+          var o = board[idx(rr, cc)];
+          if (o && o.lock > 0) hits.add(idx(rr, cc));
+        });
+      });
+      hits.forEach(function (j) {
+        var o = board[j];
+        o.lock--;
+        if (o.lock <= 0) { o.lock = 0; broken++; if (o.type === -2) clear.add(j); }
+        paint(o);
+        o.i.classList.add('hitfx');
+        setTimeout(function () { o.i.classList.remove('hitfx'); }, 320);
+      });
+
       var firstIdx = null, byType = {};
       clear.forEach(function (i) {
         var t = board[i];
@@ -1006,9 +1234,10 @@ challenge_text() +
         setTimeout(function () { t.i.classList.remove('born'); }, 400);
         say(BORN_WORDS[sp.kind]);
       });
+      if (broken) { byType.obst = broken; say('PARIN! GLAS BRUDT'); arp([6, 9, 11], 50); addTime(broken * 1.5); }
       countCleared(byType);
 
-      var gained = clear.size * 10 * combo + ex.n * 60 * combo;
+      var gained = clear.size * 10 * combo + ex.n * 60 * combo + broken * 50;
       addScore(gained);
       addTime(Math.min(5, clear.size * TIME_PER_TILE * (combo > 1 ? 1.3 : 1)));
       if (firstIdx !== null) floatText('+' + gained + (combo > 1 ? ' x' + combo : ''), Math.floor(firstIdx / SIZE), firstIdx % SIZE, 14);
@@ -1050,6 +1279,7 @@ challenge_text() +
 
   async function trySwap(i, j) {
     if (busy || !running) return;
+    if (board[i].lock || board[j].lock) { flashBad(board[i].lock ? board[i] : board[j]); return; }
     busy = true;
     clearHint();
     idleSince = performance.now();
@@ -1096,7 +1326,17 @@ challenge_text() +
     if (r < 0 || c < 0 || r >= SIZE || c >= SIZE) return -1;
     return idx(r, c);
   }
-  function select(i) { clearSelection(); if (i >= 0 && board[i]) { selected = i; board[i].el.classList.add('sel'); } }
+  function select(i) {
+    clearSelection();
+    if (i < 0 || !board[i]) return;
+    if (board[i].lock) { flashBad(board[i]); return; }
+    selected = i; board[i].el.classList.add('sel');
+  }
+  function flashBad(t) {
+    t.el.classList.remove('bad'); void t.el.offsetWidth; t.el.classList.add('bad');
+    beep(150, .1, .04);
+    setTimeout(function () { t.el.classList.remove('bad'); }, 300);
+  }
   function clearSelection() { if (selected !== null && board[selected]) board[selected].el.classList.remove('sel'); selected = null; }
   boardEl.addEventListener('pointerdown', function (e) {
     if (!running || busy) return;
@@ -1137,8 +1377,9 @@ challenge_text() +
     hintTiles.forEach(function (t) { if (t && t.el) t.el.classList.add('hint'); });
   }
 
-  function startLevel(n) {
-    levelN = n; cfg = levelConfig(n);
+  function startLevel(nd) {
+    var n = nd.n;
+    curNode = nd; levelN = n; cfg = levelConfig(nd);
     score = 0; timeLeft = TIME_START;
     shuffles = SHUFFLE_START; nextShuffleAt = SHUFFLE_EVERY;
     ended = false; busy = false;
@@ -1155,23 +1396,27 @@ challenge_text() +
     if (ended) return;
     ended = true; running = false;
     clearSelection(); clearHint();
-    var st = starsFor(score), prev = save.stars[levelN] || 0;
-    save.stars[levelN] = Math.max(prev, st);
+    var nd = curNode, st = starsFor(score), firstClear = !save.done[nd.id];
+    save.done[nd.id] = Math.max(save.done[nd.id] || 0, st);
     save.total += score;
     if (score > save.best) save.best = score;
-    var wasLocked = save.unlocked < levelN + 1;
-    if (levelN + 1 <= MAX_LEVEL) save.unlocked = Math.max(save.unlocked, levelN + 1);
+    genRows(nd.r + AHEAD + 1);
     persist();
+    var forks = nd.children.length > 1;
     say('YATTA!'); arp([4, 7, 9, 11], 90); vibrate([20, 40, 20]);
     card('<h1>KLARET!</h1><div class="jp">やったー!</div>' + starsHtml(st) +
       '<div class="big">' + score + '</div>' +
-      '<div class="rules"><p>BANE ' + levelN + (wasLocked && levelN < MAX_LEVEL ? '<br>BANE ' + (levelN + 1) + ' ER ÅBEN!' : '') + '</p></div>' +
+      '<div class="rules"><p>BANE ' + nd.n + (firstClear ? '<br>' + (forks ? 'STIEN GRENER! VÆLG VEJ.' : 'NÆSTE BANE ER ÅBEN!') : '') + '</p></div>' +
       '<button class="play" id="cGo">VIDERE</button>');
     bindCard('cGo', function () {
       closeCard();
-      var from = levelN, to = Math.min(MAX_LEVEL, levelN + 1);
       showScreen('map');
-      setTimeout(function () { placeCar(from); scrollToCar(false); driveTo(from, to, function () { refreshMapHud(); }); }, 80);
+      if (!firstClear) return;
+      var open = nd.children.map(function (id) { return nodeById[id]; }).filter(function (o) { return nodeState(o) === 'open'; });
+      if (open.length === 1) {                           // kun én vej: bilen kører selv videre
+        save.pos = open[0].id; persist();
+        setTimeout(function () { carAt(nd.x, yOf(nd)); scrollToCar(false); driveTo(nd, open[0], refreshMapHud); }, 80);
+      } else if (open.length > 1) setTimeout(function () { say('VÆLG EN STI!'); }, 200);
     });
   }
   function levelFail() {
@@ -1182,176 +1427,10 @@ challenge_text() +
     say('OWARI...'); arp([7, 5, 3, 0], 110); vibrate([20, 60, 20]);
     card('<h1>TIDEN ER UDE</h1><div class="jp">時間切れ</div>' +
       '<div class="big">' + score + '</div>' +
-      '<div class="rules"><p>DER MANGLEDE ' + left + ' DYR</p></div>' +
+      '<div class="rules"><p>DER MANGLEDE ' + left + (cfg.goals.some(function (g) { return g.type === 'obst'; }) ? ' STK.' : ' DYR') + '</p></div>' +
       '<button class="play" id="cGo">PRØV IGEN</button><button class="play alt" id="cBack">KORT</button>');
-    bindCard('cGo', function () { closeCard(); startLevel(levelN); });
+    bindCard('cGo', function () { closeCard(); startLevel(curNode); });
     bindCard('cBack', function () { closeCard(); showScreen('map'); });
-  }
-
-  // ====================== BONUSBANE (space invaders) ======================
-  var bc = $('bonusCanvas'), bg2 = bc.getContext('2d');
-  var BW = 160, BH = 200, bScale = 2;
-  var bonus = null;
-  function layoutBonus() {
-    var wrap = $('bonusWrap'), r = wrap.getBoundingClientRect();
-    bScale = Math.max(1, Math.min(4, Math.floor(Math.min(r.width / BW, r.height / BH))));
-    bc.width = BW * bScale; bc.height = BH * bScale;
-    bc.style.width = (BW * bScale) + 'px'; bc.style.height = (BH * bScale) + 'px';
-  }
-  function startBonus(n) {
-    showScreen('bonus');
-    layoutBonus();
-    var pool = levelConfig(Math.max(1, n - 1)).pool;
-    bonus = {
-      n: n, x: BW / 2, tx: BW / 2, bullets: [], bombs: [], enemies: [], wave: 1,
-      lives: 3, score: 0, time: 45, dir: 1, last: 0, fire: 0, over: false, pool: pool, flash: 0
-    };
-    spawnWave();
-    $('bScore').textContent = '0';
-    $('bLives').textContent = '♥♥♥';
-    $('bTime').textContent = '45';
-    say('UCHUU! RUMMET!');
-    arp([0, 4, 7, 11], 70);
-    requestAnimationFrame(bonusLoop);
-  }
-  function spawnWave() {
-    var cols = 5, rows = 3, i, j;
-    bonus.enemies = [];
-    for (j = 0; j < rows; j++) for (i = 0; i < cols; i++) {
-      bonus.enemies.push({
-        x: 22 + i * 29, y: 26 + j * 24,
-        type: Math.floor(Math.random() * bonus.pool), alive: true, hit: 0
-      });
-    }
-    bonus.edge = 0;
-  }
-  function bonusPointer(e) {
-    if (!bonus || bonus.over) return;
-    var r = bc.getBoundingClientRect();
-    bonus.tx = Math.max(10, Math.min(BW - 10, (e.clientX - r.left) / bScale));
-    e.preventDefault();
-  }
-  bc.addEventListener('pointerdown', bonusPointer);
-  bc.addEventListener('pointermove', function (e) { if (e.buttons || e.pointerType === 'touch') bonusPointer(e); });
-
-  function bonusLoop(now) {
-    if (!bonus || screen !== 'bonus') return;
-    requestAnimationFrame(bonusLoop);
-    if (bonus.over) return;
-    if (!bonus.last) bonus.last = now;
-    var dt = Math.min(0.05, (now - bonus.last) / 1000);
-    bonus.last = now;
-
-    bonus.time -= dt;
-    if (bonus.time <= 0) { bonus.time = 0; return endBonus(); }
-    $('bTime').textContent = Math.ceil(bonus.time);
-
-    bonus.x += (bonus.tx - bonus.x) * Math.min(1, dt * 14);           // blød styring
-    bonus.fire -= dt;
-    if (bonus.fire <= 0) { bonus.fire = 0.28; bonus.bullets.push({ x: bonus.x, y: BH - 22 }); beep(900, .04, .02); }
-
-    var i, j, b, e;
-    for (i = bonus.bullets.length - 1; i >= 0; i--) {
-      b = bonus.bullets[i];
-      b.y -= dt * 190;
-      if (b.y < -4) { bonus.bullets.splice(i, 1); continue; }
-      for (j = 0; j < bonus.enemies.length; j++) {
-        e = bonus.enemies[j];
-        if (!e.alive || Math.abs(e.x - b.x) > 8 || Math.abs(e.y - b.y) > 8) continue;
-        e.alive = false; e.hit = 0.25;
-        bonus.bullets.splice(i, 1);
-        bonus.score += 50 * bonus.wave;
-        $('bScore').textContent = bonus.score;
-        beep(300 + Math.random() * 300, .08, .04);
-        vibrate(10);
-        break;
-      }
-    }
-    // fjender bevæger sig
-    var alive = bonus.enemies.filter(function (x) { return x.alive; });
-    var speed = (14 + bonus.wave * 5) * (1 + (15 - alive.length) * 0.05);
-    var minX = 999, maxX = -999, maxY = 0;
-    alive.forEach(function (x) { minX = Math.min(minX, x.x); maxX = Math.max(maxX, x.x); maxY = Math.max(maxY, x.y); });
-    if (alive.length) {
-      if ((maxX > BW - 14 && bonus.dir > 0) || (minX < 14 && bonus.dir < 0)) {
-        bonus.dir *= -1;
-        alive.forEach(function (x) { x.y += 7; });
-      } else alive.forEach(function (x) { x.x += bonus.dir * speed * dt; });
-      if (Math.random() < dt * (0.8 + bonus.wave * 0.25) && alive.length) {
-        var sh = alive[Math.floor(Math.random() * alive.length)];
-        bonus.bombs.push({ x: sh.x, y: sh.y + 8 });
-      }
-      if (maxY > BH - 34) { hitPlayer(); alive.forEach(function (x) { x.y -= 26; }); }
-    } else { bonus.wave++; bonus.time = Math.min(60, bonus.time + 6); say('WAVE ' + bonus.wave + '!'); arp([4, 7, 11], 60); spawnWave(); }
-
-    for (i = bonus.bombs.length - 1; i >= 0; i--) {
-      b = bonus.bombs[i];
-      b.y += dt * (60 + bonus.wave * 8);
-      if (b.y > BH) { bonus.bombs.splice(i, 1); continue; }
-      if (b.y > BH - 24 && Math.abs(b.x - bonus.x) < 9) { bonus.bombs.splice(i, 1); hitPlayer(); }
-    }
-    bonus.enemies.forEach(function (x) { if (x.hit > 0) x.hit -= dt; });
-    if (bonus.flash > 0) bonus.flash -= dt;
-    drawBonus();
-  }
-  function hitPlayer() {
-    if (bonus.flash > 0) return;                       // kort usårlighed
-    bonus.lives--;
-    bonus.flash = 1.0;
-    $('bLives').textContent = '♥'.repeat(Math.max(0, bonus.lives)) || '-';
-    beep(120, .25, .06, 'sawtooth');
-    vibrate([30, 40, 30]);
-    say('ITAI!');
-    if (bonus.lives <= 0) endBonus();
-  }
-  function drawBonus() {
-    var g = bg2, s = bScale;
-    g.fillStyle = '#0a0620'; g.fillRect(0, 0, bc.width, bc.height);
-    var t = performance.now() / 1000;
-    g.fillStyle = '#2e2454';
-    for (var i = 0; i < 40; i++) {
-      var sx = (i * 37 % BW), sy = ((i * 53 + t * 18) % BH);
-      g.fillRect(Math.floor(sx) * s, Math.floor(sy) * s, s, s);
-    }
-    bonus.enemies.forEach(function (e) {
-      if (!e.alive) {
-        if (e.hit > 0) { g.fillStyle = '#ffd23f'; g.fillRect((e.x - 6) * s, (e.y - 6) * s, 12 * s, 12 * s); }
-        return;
-      }
-      var px = Math.max(1, Math.floor(s * 1.1));
-      var img = spriteFor(e.type, px);
-      g.drawImage(img, Math.round((e.x * s) - img.width / 2), Math.round((e.y * s) - img.height / 2));
-    });
-    g.fillStyle = '#9dff4a';
-    bonus.bullets.forEach(function (b) { g.fillRect((b.x - 1) * s, (b.y - 4) * s, 2 * s, 5 * s); });
-    g.fillStyle = '#e8334a';
-    bonus.bombs.forEach(function (b) { g.fillRect((b.x - 1) * s, b.y * s, 3 * s, 5 * s); });
-    if (!(bonus.flash > 0 && Math.floor(bonus.flash * 12) % 2)) {
-      var car = spriteCanvas(CAR, Math.max(1, s));
-      g.drawImage(car, Math.round(bonus.x * s - car.width / 2), BH * s - car.height - 2 * s);
-    }
-  }
-  function endBonus() {
-    if (!bonus || bonus.over) return;
-    bonus.over = true;
-    var n = bonus.n, sc = bonus.score;
-    save.total += sc;
-    if (sc > save.best) save.best = sc;
-    save.stars[n] = Math.max(save.stars[n] || 0, sc >= 1500 ? 3 : (sc >= 700 ? 2 : 1));
-    if (n + 1 <= MAX_LEVEL) save.unlocked = Math.max(save.unlocked, n + 1);
-    persist();
-    say(sc > 800 ? 'SUGOI!!' : 'OTSUKARE!');
-    arp([4, 7, 9, 11], 90);
-    card('<h1>BONUS SLUT</h1><div class="jp">おつかれ!</div>' + starsHtml(save.stars[n]) +
-      '<div class="big">' + sc + '</div>' +
-      '<div class="rules"><p>WAVE ' + bonus.wave + '<br>BANE ' + Math.min(MAX_LEVEL, n + 1) + ' ER ÅBEN!</p></div>' +
-      '<button class="play" id="cGo">VIDERE</button>');
-    bindCard('cGo', function () {
-      closeCard();
-      var from = n, to = Math.min(MAX_LEVEL, n + 1);
-      showScreen('map');
-      setTimeout(function () { placeCar(from); scrollToCar(false); driveTo(from, to, function () { refreshMapHud(); }); }, 80);
-    });
   }
 
   // ====================== Hovedloop (match-3 tid) ======================
@@ -1386,6 +1465,12 @@ challenge_text() +
     soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
     if (soundOn) beep(760, .1, .05);
   });
+  onTap(musicBtn, function () {
+    musicOn = !musicOn;
+    save.music = musicOn; persist();
+    musicBtn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
+    if (musicOn) startMusic(); else stopMusic();
+  });
   onTap(mapBtn, function () {
     if (screen === 'game' && running && !ended) {
       card('<h1>FORLAD BANEN?</h1><div class="rules"><p>DINE POINT I DENNE BANE GÅR TABT.</p></div>' +
@@ -1394,18 +1479,18 @@ challenge_text() +
       bindCard('cBack', closeCard);
       return;
     }
-    if (bonus && !bonus.over) { bonus.over = true; }
     running = false;
     closeCard();
     showScreen('map');
   });
 
-  window.addEventListener('resize', function () { drawBg(); layout(); layoutBonus(); if (screen === 'map') drawMap(); });
-  window.addEventListener('orientationchange', function () { setTimeout(function () { drawBg(); layout(); layoutBonus(); if (screen === 'map') drawMap(); }, 150); });
-  document.addEventListener('visibilitychange', function () { lastTick = 0; idleSince = performance.now(); if (bonus) bonus.last = 0; });
+  window.addEventListener('resize', function () { drawBg(); layout(); if (screen === 'map') drawMap(); });
+  window.addEventListener('orientationchange', function () { setTimeout(function () { drawBg(); layout(); if (screen === 'map') drawMap(); }, 150); });
+  document.addEventListener('visibilitychange', function () { lastTick = 0; idleSince = performance.now();
+    if (document.hidden) stopMusic(); else if (musicOn) startMusic();
+  });
   document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
   boardEl.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
-  bc.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
 
   try {
     if ('serviceWorker' in navigator) {
@@ -1419,14 +1504,22 @@ challenge_text() +
   drawBg(); makePetals();
   spriteCanvas(SPRITES[1], 1, mascot);
   setSprites(3);
-  buildPath();
+  resetPath();
+  if (save.unlocked > 1 && !Object.keys(save.done).length) {     // gem fra den gamle, endelige bjergvej
+    var oldStars = save.stars || {}, lim = save.unlocked - 1;
+    genRows(lim + AHEAD);
+    for (var lr = 0; lr < lim; lr++) rows[lr].nodes.forEach(function (nd) { save.done[nd.id] = oldStars[lr + 1] || 1; });
+    save.pos = rows[lim].nodes[0].id;
+  }
+  delete save.unlocked; delete save.stars;
+  if (!nodeById[save.pos]) save.pos = '0:0';
   showScreen('map');
   card('<canvas class="big-m" id="introM" width="72" height="72"></canvas>' +
     '<h1>HARBU<span>ZOO</span></h1><div class="jp">どうぶつパズル</div>' +
-    '<div class="rules"><p>KØR OP AD BJERGET OG KLAR EN BANE AD GANGEN.</p>' +
+    '<div class="rules"><p>KØR OP AD BJERGET. STIEN ER UENDELIG OG GRENER SIG UNDERVEJS: VÆLG SELV VEJ!</p>' +
     '<p>HVER BANE HAR ET <b class="c3">MÅL</b>: SAML X AF ET DYR FØR TIDEN LØBER UD.</p>' +
     '<p><b class="c1">4 I TRÆK</b> = KATANA &middot; <b class="c2">L/T</b> = BAKUDAN &middot; <b class="c3">5</b> = NIJI</p>' +
-    '<p>HVER 5. BANE ER EN <b class="c4">BONUSBANE</b> I RUMMET!</p></div>' +
+    '<p>DYR I <b class="c1">GLAS</b> ER LÅST. LAV EN STRIBE VED SIDEN AF FOR AT BRYDE DET. JO HØJERE DU KOMMER, JO VANSKELIGERE BLIVER DET!</p></div>' +
     '<button class="play" id="cGo">TIL KORTET</button>');
   spriteCanvas(SPRITES[1], 6, $('introM'));
   bindCard('cGo', function () { closeCard(); showScreen('map'); });
@@ -1438,18 +1531,15 @@ challenge_text() +
       cfg: function () { return cfg; },
       save: save,
       state: function () { return { screen: screen, score: score, levelN: levelN, shuffles: shuffles, busy: busy, running: running, ended: ended,
-        goals: cfg ? cfg.goals.map(function (g) { return [g.type, g.got, g.need]; }) : null,
-        bonus: bonus ? { score: bonus.score, lives: bonus.lives, over: bonus.over, wave: bonus.wave, enemies: bonus.enemies.filter(function (e) { return e.alive; }).length } : null }; },
+        goals: cfg ? cfg.goals.map(function (g) { return [g.type, g.got, g.need]; }) : null }; },
       setType: function (i, type) { var t = board[i]; t.type = type; t.special = null; paint(t); },
       setSpecial: function (i, kind) { var t = board[i]; t.special = kind; if (kind === 'rainbow') t.type = -1; paint(t); },
       swap: function (i, j) { return trySwap(i, j); },
-      startLevel: startLevel, startBonus: startBonus,
-      unlockTo: function (n) { save.unlocked = n; persist(); drawMap(); refreshMapHud(); },
+      startLevel: startLevel, openLevel: openLevel, nodeById: function (id) { return nodeById[id]; }, nodeState: nodeState,
+      rows: function () { return rows; }, levelConfig: levelConfig,
       setTime: function (t) { timeLeft = t; },
-      bonusObj: function () { return bonus; },
-      nodes: function () { return nodes; },
       carPos: function () { return { x: carEl._ux, y: carEl._uy }; },
-      reset: function () { save.unlocked = 1; save.stars = {}; save.total = 0; persist(); drawMap(); refreshMapHud(); }
+      reset: function () { save.done = {}; save.pos = '0:0'; save.total = 0; persist(); drawMap(); refreshMapHud(); }
     };
   }
 })();

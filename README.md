@@ -40,7 +40,61 @@ zookeeper.html is a small pixel-art match-3 animal game in wacky Japan style (ma
 
 Map and progression
 
-* A randomly generated mountain road with 30 level dots, drawn as pixel art
+* An endless, randomly generated mountain road drawn as pixel art, with new zones (forest, cliffs, snow, clouds) and torii gates as you climb
+* Every now and then the road forks in two. Pick a branch, the other one closes, and the branches meet again a few levels later
+* A silly little car drives from dot to dot when you clear a level
+* Up to 3 stars per level, progress and stars stored locally
+* The road layout is generated from a seed stored with the save, so it stays yours
+
+Levels
+
+* Every level has a goal: collect X of one to three animals before the time runs out
+* Swipe or tap two neighbouring animals to swap them, 3 in a row clears them
+* 4 in a row creates a KATANA that clears a whole row or column
+* L or T shapes create a BAKUDAN that blows up an area
+* 5 in a row creates a NIJI (rainbow). Swap it with an animal to clear every animal of that kind
+* Special pieces can be swapped with any neighbour and chain into each other
+* Limited SHUFFLE button, you start with 2 per level and earn +1 for every 1000 points
+* Auto shuffle when no moves are left, hint after a few seconds idle
+
+Obstacles and difficulty
+
+* The game never ends: every level is a bit harder with more animal kinds, bigger goals and faster time
+* From level 4 some animals are locked in glass. Locked animals cannot be swapped or matched, break the glass by clearing animals right next to it or with an explosion
+* From level 10 some glass is thick and takes two hits
+* From level 16 stone blocks appear that are broken the same way
+* Some levels have a goal to break a number of glass and stone pieces
+
+Music
+
+* A small Game Boy style melody (pulse wave, triangle bass and hi-hat) loops in the background
+* The music button turns it on and off, SFX turns the sound effects on and off, both are remembered
+
+Mobile first UI with safe area handling
+
+Tech
+
+HarbuPlayer is built as a single HTML file using vanilla JavaScript, CSS and browser APIs:
+
+* IndexedDB
+* File System Access API
+* HTML5 Audio
+* Media Session API
+* Progressive Web App manifest
+* Service Worker support
+
+Notes
+
+This project is designed as a personal music player experiment, focused on keeping things simple, fast and device local. No accounts, no streaming service, no unnecessary backend. Just your music, stored and played from your own device.
+
+HarbuZoo (spil)
+
+zookeeper.html is a small pixel-art match-3 animal game in wacky Japan style (maneki-neko, tanuki, kitsune, panda, kappa, tako and hiyoko), written in the same single file style as the player. Open /zookeeper.html on a phone and play directly in the browser.
+
+Map and progression
+
+* An endless, randomly generated mountain road drawn as pixel art, with new zones (forest, cliffs, snow, clouds) and torii gates as you climb
+* Every now and then the road forks in two. Pick a branch, the other one closes, and the branches meet again a few levels later
 * A silly little car drives from dot to dot when you clear a level
 * Up to 3 stars per level, progress and stars stored locally
 * The road layout is generated from a seed stored with the save, so it stays yours
@@ -62,4 +116,4 @@ Bonus levels
 * Drag to steer the car, it fires by itself, dodge the bombs, 3 lives and 45 seconds
 * Endless waves that get faster, points are added to your total
 
-Mobile first, safe area handling, chiptune sound and an offline friendly single file.
+Mobile first, safe area handling, chiptune sound and music and an offline friendly single file.
