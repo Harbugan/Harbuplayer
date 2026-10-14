@@ -63,3 +63,15 @@ Bonus levels
 * Endless waves that get faster, points are added to your total
 
 Mobile first, safe area handling, chiptune sound and an offline friendly single file.
+
+Primal Panic (spil)
+
+primalpanic.html er en lille 8-bit arcade i mid-80'er stil: hulemanden Oog mod en T-Rex i junglen. Donkey Kong møder Bruce Lee på C64, med et strejf af Primal. Single file, ingen afhængigheder, åbn /primalpanic.html.
+
+* 3 baner der gentager sig og bliver sværere for hver runde: hurtigere og flere kampesten, flere og hurtigere fjender, mindre bonustid
+* Bane 1 Jungle Climb: klatr op ad ranker og spring over rullende kampesten, op til Mia
+* Bane 2 Raptor Ruins: saml alle fakler for at åbne buret (Bruce Lee style), mens raptorer jagter dig
+* Bane 3 Rex Nest: stjæl alle T-Rexens æg mens gnister vandrer rundt og kampesten vælter ned
+* Slå med køllen mod kampesten og fjender, spring over kampesten for bonuspoint
+* Liv, bonustimer, ekstra liv hver 20000 point og en Hall of Fame med 3 bogstaver (gemmes lokalt)
+* Chiptune-lyd og musik, tastatur (piletaster, Space/Z = hop, X/C = kølle, P = pause, M = lyd) og touch-knapper på mobil
