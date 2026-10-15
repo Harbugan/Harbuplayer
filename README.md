@@ -57,6 +57,18 @@ Levels
 * Limited SHUFFLE button, you start with 2 per level and earn +1 for every 1000 points
 * Auto shuffle when no moves are left, hint after a few seconds idle
 
+Combos
+
+* Chains: every cascade raises the multiplier. Chains show as big kanji stamps (RENSA, DAI-RENSA, CHOU-RENSA, KAMI-RENSA) and give bonus time and fireworks from 3 chains
+* Mega combos: swap two special pieces. KATANA + KATANA is a cross (JUUJI KATANA), KATANA + BAKUDAN clears 3 rows and 3 columns (BAKUDAN KATANA), BAKUDAN + BAKUDAN is a huge blast (DAI-BAKUDAN). NIJI combos work as before
+* RENKA: make moves in quick succession to build a streak multiplier up to x2.5
+* MATSURI: clears fill the festival meter. When it is full the board lights up for 9 seconds with x2 points and the timer frozen
+
+Look and feel
+
+* Seigaiha wave pattern board with a gold lacquer frame, paper lantern garland, drifting clouds, cherry blossom trees and pagodas on the map, stone lanterns along the road
+* Pixel particles, fireworks (hanabi) and kanji stamps on combos and level wins
+
 Obstacles and difficulty
 
 * The game never ends: every level is a bit harder with more animal kinds, bigger goals and faster time
