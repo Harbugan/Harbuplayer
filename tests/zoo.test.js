@@ -11,6 +11,7 @@ const results = [];
 let browser;
 function ok(c, msg) { if (!c) throw new Error(msg); }
 async function T(name, fn) {
+  if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   const errors = [];
@@ -139,13 +140,13 @@ const st = page => page.evaluate(() => __zoo.state());
       const z = __zoo, bad = [];
       for (let k = 0; k < 300; k++) {
         const locked = z.board().map((t, i) => t && t.lock ? [i, t.id] : null).filter(Boolean);
-        if (k % 3 === 1) z.setLayout(new Array(64).fill(0).map((_, i) => (i % 3 === 0 ? 0 : 1)));   // næsten ensartet: svært at blande
+        if (k % 3 === 1) z.board().forEach((t, i) => { if (t && !t.lock && !t.special) t.type = (i % 3 === 0 ? 0 : 1); });   // næsten ensartet (kun frie brikker): svært at blande
         if (k % 3 === 2) { const t = z.board()[5]; t.special = null; }
         z.shuffleBoard();
         const e = __integrity();
         const now = z.board().map((t, i) => t && t.lock ? [i, t.id] : null).filter(Boolean);
         if (JSON.stringify(locked.length) !== JSON.stringify(now.length)) bad.push('låst-antal@' + k);
-        locked.forEach((l, q) => { if (!now.some(n => n[0] === l[0] && n[1] === l[1]) && k % 3 !== 1) bad.push('flyttet@' + k); });
+        locked.forEach((l, q) => { if (!now.some(n => n[0] === l[0] && n[1] === l[1]) ) bad.push('flyttet@' + k); });
         e.filter(x => !/^dompos/.test(x) && x !== 'dom=64').forEach(x => bad.push(x + '@' + k));
         if (bad.length > 5) break;
       }
